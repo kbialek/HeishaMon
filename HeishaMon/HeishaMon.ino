@@ -1,13 +1,13 @@
 
 #define LWIP_INTERNAL
 
-#include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
+#include <WiFi.h>
+// #include <mDNS.h>
 #include <DNSServer.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <DNSServer.h>
-#include <DoubleResetDetect.h>
+// #include <DoubleResetDetect.h>
 
 #include <ArduinoJson.h>
 
@@ -16,18 +16,18 @@
 #include "src/common/stricmp.h"
 #include "src/common/log.h"
 #include "src/common/progmem.h"
-#include "src/rules/rules.h"
+// #include "src/rules/rules.h"
 
 #include "webfunctions.h"
 #include "decode.h"
 #include "commands.h"
-#include "rules.h"
+// #include "rules.h"
 #include "version.h"
 
 DNSServer dnsServer;
 
 //to read bus voltage in stats
-ADC_MODE(ADC_VCC);
+// ADC_MODE(ADC_VCC);
 
 // maximum number of seconds between resets that
 // counts as a double reset
@@ -105,9 +105,6 @@ static uint8_t cmdstart = 0;
 static uint8_t cmdend = 0;
 static uint8_t cmdnrel = 0;
 
-//doule reset detection
-DoubleResetDetect drd(DRD_TIMEOUT, DRD_ADDRESS);
-
 // mqtt
 WiFiClient mqtt_wifi_client;
 PubSubClient mqtt_client(mqtt_wifi_client);
@@ -167,27 +164,32 @@ void check_wifi()
     if (WiFi.softAPSSID() != "") {
       log_message(_F("WiFi (re)connected, shutting down hotspot..."));
       WiFi.softAPdisconnect(true);
-      MDNS.notifyAPChange();
+      // ESP32:Disabled
+      // MDNS.notifyAPChange();
     }
 
     if (firstConnectSinceBoot) { // this should start only when softap is down or else it will not work properly so run after the routine to disable softap
       firstConnectSinceBoot = false;
       lastMqttReconnectAttempt = 0; //initiate mqtt connection asap
       setupOTA();
-      MDNS.begin(heishamonSettings.wifi_hostname);
-      MDNS.addService("http", "tcp", 80);
-      experimental::ESP8266WiFiGratuitous::stationKeepAliveSetIntervalMs(5000); //necessary for some users with bad wifi routers
+      // ESP32:Disabled
+      // MDNS.begin(heishamonSettings.wifi_hostname);
+      // MDNS.addService("http", "tcp", 80);
 
-      if (heishamonSettings.wifi_ssid[0] == '\0') {
-        log_message(_F("WiFi connected without SSID and password in settings. Must come from persistent memory. Storing in settings."));
-        WiFi.SSID().toCharArray(heishamonSettings.wifi_ssid, 40);
-        WiFi.psk().toCharArray(heishamonSettings.wifi_password, 40);
-        DynamicJsonDocument jsonDoc(1024);
-        settingsToJson(jsonDoc, &heishamonSettings); //stores current settings in a json document
-        saveJsonToConfig(jsonDoc); //save to config file
-      }
+      // ESP32:Disabled
+      // experimental::ESP8266WiFiGratuitous::stationKeepAliveSetIntervalMs(5000); //necessary for some users with bad wifi routers
 
-      ntpReload(&heishamonSettings);
+      // ESP32:Disabled
+      // if (heishamonSettings.wifi_ssid[0] == '\0') {
+      //   log_message(_F("WiFi connected without SSID and password in settings. Must come from persistent memory. Storing in settings."));
+      //   WiFi.SSID().toCharArray(heishamonSettings.wifi_ssid, 40);
+      //   WiFi.psk().toCharArray(heishamonSettings.wifi_password, 40);
+      //   DynamicJsonDocument jsonDoc(1024);
+      //   settingsToJson(jsonDoc, &heishamonSettings); //stores current settings in a json document
+      //   saveJsonToConfig(jsonDoc); //save to config file
+      // }
+
+      // ntpReload(&heishamonSettings);
     }
 
     /*
@@ -197,7 +199,8 @@ void check_wifi()
     lastWifiRetryTimer = millis();
 
     // Allow MDNS processing
-    MDNS.update();
+    // ESP32:Disabled
+    // MDNS.update();
   }
 }
 
@@ -212,10 +215,6 @@ void mqtt_reconnect()
     if (mqtt_client.connect(heishamonSettings.wifi_hostname, heishamonSettings.mqtt_username, heishamonSettings.mqtt_password, topic, 1, true, "Offline"))
     {
       mqttReconnects++;
-      if (heishamonSettings.opentherm) {
-        sprintf(topic, "%s/%s/#", heishamonSettings.mqtt_topic_base, mqtt_topic_opentherm);
-        mqtt_client.subscribe(topic);
-      }
       sprintf(topic, "%s/%s/#", heishamonSettings.mqtt_topic_base, mqtt_topic_commands);
       mqtt_client.subscribe(topic);
       sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_send_raw_value_topic);
@@ -232,7 +231,6 @@ void mqtt_reconnect()
         mqtt_client.subscribe(mqtt_topic);
       }
       if (mqttReconnects == 1) { //only resend all data on first connect to mqtt so a data bomb like and bad mqtt server will not cause a reconnect bomb everytime
-        if (heishamonSettings.use_1wire) resetlastalldatatime_dallas(); //resend all 1wire values to mqtt
         resetlastalldatatime(); //resend all heatpump values to mqtt
       }
       //use this to receive valid heishamon raw data from other heishamon to debug this OT code
@@ -493,9 +491,6 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
       decode_heatpump_data(msg, actData, mqtt_client, log_message, heishamonSettings.mqtt_topic_base, heishamonSettings.updateAllTime);
       memcpy(actData, msg, DATASIZE);
 #endif
-    } else if (strncmp(topic_command, mqtt_topic_opentherm, strlen(mqtt_topic_opentherm)) == 0)  {
-      char* topic_otcommand = topic_command + strlen(mqtt_topic_opentherm) + 1; //strip the opentherm subtopic from the topic
-      mqttOTCallback(topic_otcommand, msg);
     }
     mqttcallbackinprogress = false;
   }
@@ -524,6 +519,7 @@ void setupOTA() {
   ArduinoOTA.begin();
 }
 
+/*
 int8_t webserver_cb(struct webserver_t *client, void *dat) {
   switch (client->step) {
     case WEBSERVER_CLIENT_REQUEST_METHOD: {
@@ -896,84 +892,84 @@ int8_t webserver_cb(struct webserver_t *client, void *dat) {
 
   return 0;
 }
+*/
 
-void setupHttp() {
-  webserver_start(80, &webserver_cb, 0);
-}
+// ESP32:Disabled
+// void setupHttp() {
+//   webserver_start(80, &webserver_cb, 0);
+// }
 
-void doubleResetDetect() {
-  if (drd.detect()) {
-    Serial.println("Double reset detected, clearing config."); //save to print on std serial because serial switch didn't happen yet
-    LittleFS.begin();
-    LittleFS.format();
-    //create first boot file
-    File startupFile = LittleFS.open("/heishamon", "w");
-    startupFile.close();    
-    WiFi.persistent(true);
-    WiFi.disconnect();
-    WiFi.persistent(false);
-    Serial.println("Config cleared. Please reset to configure this device...");
-    //initiate debug led indication for factory reset
-    pinMode(2, FUNCTION_0); //set it as gpio
-    pinMode(2, OUTPUT);
-    while (true) {
-      digitalWrite(2, HIGH);
-      delay(100);
-      digitalWrite(2, LOW);
-      delay(100);
-    }
+// void doubleResetDetect() {
+//   if (drd.detect()) {
+//     Serial.println("Double reset detected, clearing config."); //save to print on std serial because serial switch didn't happen yet
+//     LittleFS.begin();
+//     LittleFS.format();
+//     //create first boot file
+//     File startupFile = LittleFS.open("/heishamon", "w");
+//     startupFile.close();    
+//     WiFi.persistent(true);
+//     WiFi.disconnect();
+//     WiFi.persistent(false);
+//     Serial.println("Config cleared. Please reset to configure this device...");
+//     //initiate debug led indication for factory reset
+//     pinMode(2, FUNCTION_0); //set it as gpio
+//     pinMode(2, OUTPUT);
+//     while (true) {
+//       digitalWrite(2, HIGH);
+//       delay(100);
+//       digitalWrite(2, LOW);
+//       delay(100);
+//     }
 
-  }
-}
+//   }
+// }
 
 void setupSerial() {
   //boot issue's first on normal serial
-  Serial.begin(115200);
-  Serial.flush();
+  // Serial.begin(115200);
+  // Serial.flush();
 }
 
 void setupSerial1() {
-  if (heishamonSettings.logSerial1) { //settings are not loaded yet, this is the startup default
-    //debug line on serial1 (D4, GPIO2)
-    Serial1.begin(115200);
-    Serial1.print(F("Starting debugging, version: "));
-    Serial1.println(heishamon_version);
-  }
-  else {
-    pinMode(2, FUNCTION_0); //set it as gpio
-  }
+  // if (heishamonSettings.logSerial1) { //settings are not loaded yet, this is the startup default
+  //   //debug line on serial1 (D4, GPIO2)
+  //   Serial1.begin(115200);
+  //   Serial1.print(F("Starting debugging, version: "));
+  //   Serial1.println(heishamon_version);
+  // }
+  // else {
+  //   pinMode(2, FUNCTION_0); //set it as gpio
+  // }
 }
 
 void switchSerial() {
-  Serial.println(F("Switching serial to connect to heatpump. Look for debug on serial1 (GPIO2) and mqtt log topic."));
-  //serial to cn-cnt
-  Serial.flush();
-  Serial.end();
-  Serial.begin(9600, SERIAL_8E1);
-  Serial.flush();
-  //swap to gpio13 (D7) and gpio15 (D8)
-  Serial.swap();
-  //turn on GPIO's on tx/rx for opentherm part
-  pinMode(1, FUNCTION_3);
-  pinMode(3, FUNCTION_3);
+  // Serial.println(F("Switching serial to connect to heatpump. Look for debug on serial1 (GPIO2) and mqtt log topic."));
+  // //serial to cn-cnt
+  // Serial.flush();
+  // Serial.end();
+  // Serial.begin(9600, SERIAL_8E1);
+  // Serial.flush();
+  // //turn on GPIO's on tx/rx for opentherm part
+  // pinMode(1, FUNCTION_3);
+  // pinMode(3, FUNCTION_3);
 
-  setupGPIO(heishamonSettings.gpioSettings); //switch extra GPIOs to configured mode
+  // setupGPIO(heishamonSettings.gpioSettings); //switch extra GPIOs to configured mode
 
-  //mosfet output enable
-  pinMode(5, OUTPUT);
+  // //mosfet output enable
+  // pinMode(5, OUTPUT);
 
-  //try to detect if cz-taw1 is connected in parallel
-  if (!heishamonSettings.listenonly) {
-    if (Serial.available() > 0) {
-      log_message(_F("There is data on the line without asking for it. Switching to listen only mode."));
-      heishamonSettings.listenonly = true;
-    }
-    else {
-      //enable gpio15 after boot using gpio5 (D1) which enables the level shifter for the tx to panasonic
-      //do not enable if listen only to keep the line floating
-      digitalWrite(5, HIGH);
-    }
-  }
+  // //try to detect if cz-taw1 is connected in parallel
+  // if (!heishamonSettings.listenonly) {
+  //   if (Serial.available() > 0) {
+  //     log_message(_F("There is data on the line without asking for it. Switching to listen only mode."));
+  //     heishamonSettings.listenonly = true;
+  //   }
+  //   else {
+  //     //enable gpio15 after boot using gpio5 (D1) which enables the level shifter for the tx to panasonic
+  //     //do not enable if listen only to keep the line floating
+  //     digitalWrite(5, HIGH);
+  //   }
+  // }
 }
 
 void setupMqtt() {
@@ -1000,48 +996,50 @@ void setupConditionals() {
   }
 
   //these two after optional pcb because it needs to send a datagram fast after boot
-  if (heishamonSettings.use_1wire) initDallasSensors(log_message, heishamonSettings.updataAllDallasTime, heishamonSettings.waitDallasTime, heishamonSettings.dallasResolution);
+  // if (heishamonSettings.use_1wire) initDallasSensors(log_message, heishamonSettings.updataAllDallasTime, heishamonSettings.waitDallasTime, heishamonSettings.dallasResolution);
   if (heishamonSettings.use_s0) initS0Sensors(heishamonSettings.s0Settings);
 
 
 }
 
+
 void timer_cb(int nr) {
-  if (nr > 0) {
-    rules_timer_cb(nr);
-  } else {
-    switch (nr) {
-      case -1: {
-          LittleFS.begin();
-          LittleFS.format();
-          //create first boot file
-          File startupFile = LittleFS.open("/heishamon", "w");
-          startupFile.close(); 
-          WiFi.disconnect(true);
-          timerqueue_insert(1, 0, -2);
-        } break;
-      case -2: {
-          ESP.restart();
-        } break;
-      case -3: {
-          setupWifi(&heishamonSettings);
-        } break;
-      case -4: {
-          if (rules_parse("/rules.new") == -1) {
-            logprintln_P(F("new ruleset failed to parse, using previous ruleset"));
-            rules_parse("/rules.txt");
-          } else {
-            logprintln_P(F("new ruleset successfully parsed"));
-            if (LittleFS.begin()) {
-              LittleFS.rename("/rules.new", "/rules.txt");
-            }
-          }
-          rules_boot();
-        } break;
-    }
-  }
+  // if (nr > 0) {
+  //   rules_timer_cb(nr);
+  // } else {
+  //   switch (nr) {
+  //     case -1: {
+  //         LittleFS.begin();
+  //         LittleFS.format();
+  //         //create first boot file
+  //         File startupFile = LittleFS.open("/heishamon", "w");
+  //         startupFile.close(); 
+  //         WiFi.disconnect(true);
+  //         timerqueue_insert(1, 0, -2);
+  //       } break;
+  //     case -2: {
+  //         ESP.restart();
+  //       } break;
+  //     case -3: {
+  //         setupWifi(&heishamonSettings);
+  //       } break;
+  //     case -4: {
+  //         if (rules_parse("/rules.new") == -1) {
+  //           logprintln_P(F("new ruleset failed to parse, using previous ruleset"));
+  //           rules_parse("/rules.txt");
+  //         } else {
+  //           logprintln_P(F("new ruleset successfully parsed"));
+  //           if (LittleFS.begin()) {
+  //             LittleFS.rename("/rules.new", "/rules.txt");
+  //           }
+  //         }
+  //         rules_boot();
+  //       } break;
+  //   }
+  // }
 
 }
+
 
 void setup() {
   //first get total memory before we do anything
@@ -1059,42 +1057,40 @@ void setup() {
   Serial.println(F("starting..."));
 
   //first boot check, to visually confirm good flash
-  if (LittleFS.begin()) {
-    if (LittleFS.exists("/heishamon")) {
-      //normal boot
-    } else if (LittleFS.exists("/config.json")) {
-      //from old firmware, create file and then normal boot
-      File startupFile = LittleFS.open("/heishamon", "w");
-      startupFile.close();    
-    } else {
-      //first boot
-      File startupFile = LittleFS.open("/heishamon", "w");
-      startupFile.close();    
-      pinMode(2, FUNCTION_0); //set it as gpio
-      pinMode(2, OUTPUT);
-      while (true) {
-        digitalWrite(2, HIGH);
-        delay(50);
-        digitalWrite(2, LOW);
-        delay(50);
-      }
-    }
-  }
-
-  //double reset detect from start
-  doubleResetDetect();
+  // if (LittleFS.begin()) {
+  //   if (LittleFS.exists("/heishamon")) {
+  //     //normal boot
+  //   } else if (LittleFS.exists("/config.json")) {
+  //     //from old firmware, create file and then normal boot
+  //     File startupFile = LittleFS.open("/heishamon", "w");
+  //     startupFile.close();    
+  //   } else {
+  //     //first boot
+  //     File startupFile = LittleFS.open("/heishamon", "w");
+  //     startupFile.close();    
+  //     pinMode(2, FUNCTION_0); //set it as gpio
+  //     pinMode(2, OUTPUT);
+  //     while (true) {
+  //       digitalWrite(2, HIGH);
+  //       delay(50);
+  //       digitalWrite(2, LOW);
+  //       delay(50);
+  //     }
+  //   }
+  // }
 
   WiFi.printDiag(Serial);
   //initiate a wifi scan at boot to prefill the wifi scan json list
   byte numSsid = WiFi.scanNetworks();
-  getWifiScanResults(numSsid);
+  // ESP32:Disabled
+  // getWifiScanResults(numSsid);
 
   loadSettings(&heishamonSettings);
 
   setupWifi(&heishamonSettings);
 
   setupMqtt();
-  setupHttp();
+  // setupHttp();
 
   sntp_setoperatingmode(SNTP_OPMODE_POLL);
   sntp_init();
@@ -1107,27 +1103,21 @@ void setup() {
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
   dnsServer.start(DNS_PORT, "*", apIP);
 
-  //OT begin must be after serial setup
-  if (heishamonSettings.opentherm) {
-    //always enable mosfets if opentherm is used
-    digitalWrite(5, HIGH);
-    HeishaOTSetup();
-  }
+  // ESP32:Disabled
+  // rst_info *resetInfo = ESP.getResetInfoPtr();
+  // Serial1.printf(PSTR("Reset reason: %d, exception cause: %d\n"), resetInfo->reason, resetInfo->exccause);
 
-  rst_info *resetInfo = ESP.getResetInfoPtr();
-  Serial1.printf(PSTR("Reset reason: %d, exception cause: %d\n"), resetInfo->reason, resetInfo->exccause);
-
-  if (resetInfo->reason > 0 && resetInfo->reason < 4) {
-    if (LittleFS.begin()) {
-      LittleFS.rename("/rules.txt", "/rules.old");
-    }
-    rules_setup();
-    if (LittleFS.begin()) {
-      LittleFS.rename("/rules.old", "/rules.txt");
-    }
-  } else {
-    rules_setup();
-  }
+  // if (resetInfo->reason > 0 && resetInfo->reason < 4) {
+  //   if (LittleFS.begin()) {
+  //     LittleFS.rename("/rules.txt", "/rules.old");
+  //   }
+  //   rules_setup();
+  //   if (LittleFS.begin()) {
+  //     LittleFS.rename("/rules.old", "/rules.txt");
+  //   }
+  // } else {
+  //   rules_setup();
+  // }
 }
 
 void send_initial_query() {
@@ -1190,10 +1180,6 @@ void loop() {
 
   mqtt_client.loop();
 
-  if (heishamonSettings.opentherm) {
-    HeishaOTLoop(actData, mqtt_client, heishamonSettings.mqtt_topic_base);
-  }
-
   read_panasonic_data();
 
   if ((!sending) && (cmdnrel > 0)) { //check if there is a send command in the buffer
@@ -1201,7 +1187,7 @@ void loop() {
     popCommandBuffer();
   }
 
-  if (heishamonSettings.use_1wire) dallasLoop(mqtt_client, log_message, heishamonSettings.mqtt_topic_base);
+  // if (heishamonSettings.use_1wire) dallasLoop(mqtt_client, log_message, heishamonSettings.mqtt_topic_base);
 
   if (heishamonSettings.use_s0) s0Loop(mqtt_client, log_message, heishamonSettings.mqtt_topic_base, heishamonSettings.s0Settings);
 
@@ -1238,12 +1224,13 @@ void loop() {
     free(up);
     message += F(" ## Free memory: ");
     message += getFreeMemory();
-    message += F("% ## Heap fragmentation: ");
-    message += ESP.getHeapFragmentation();
-    message += F("% ## Max free block: ");
-    message += ESP.getMaxFreeBlockSize();
-    message += F(" bytes ## Free heap: ");
-    message += ESP.getFreeHeap();
+    // ESP32:Disabled
+    // message += F("% ## Heap fragmentation: ");
+    // message += ESP.getHeapFragmentation();
+    // message += F("% ## Max free block: ");
+    // message += ESP.getMaxFreeBlockSize();
+    // message += F(" bytes ## Free heap: ");
+    // message += ESP.getFreeHeap();
     message += F(" bytes ## Wifi: ");
     message += getWifiQuality();
     message += F("% (RSSI: ");
@@ -1259,8 +1246,9 @@ void loop() {
     stats.reserve(384);
     stats += F("{\"uptime\":");
     stats += String(millis());
-    stats += F(",\"voltage\":");
-    stats += ESP.getVcc() / 1024.0;
+    // ESP32:Disabled
+    // stats += F(",\"voltage\":");
+    // stats += ESP.getVcc() / 1024.0;
     stats += F(",\"free memory\":");
     stats += getFreeMemory();
     stats += F(",\"free heap\":");
@@ -1297,7 +1285,8 @@ void loop() {
     mqtt_client.publish(mqtt_topic, "Online");
 
     if (WiFi.isConnected()) {
-      MDNS.announce();
+      // ESP32:Disabled
+      // MDNS.announce();
     }
   }
 

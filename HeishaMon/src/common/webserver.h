@@ -62,11 +62,11 @@
   #include <WiFiClient.h>
 #endif
 
-#if !defined(err_t) && !defined(ESP8266)
+#if !defined(err_t) && !defined(ESP32)
   #define err_t uint8_t
 #endif
 
-#ifndef ESP8266
+#ifndef ESP32
 typedef struct tcp_pcb {
 } tcp_pcb;
 
@@ -111,7 +111,7 @@ typedef struct sendlist_t {
 #endif
 } sendlist_t;
 
-#ifndef ESP8266
+#ifndef ESP32
 struct WiFiClient {
   int (*write)(unsigned char *, int i);
   int (*write_P)(const char *, int i);

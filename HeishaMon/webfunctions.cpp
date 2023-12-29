@@ -10,9 +10,10 @@
 #include "lwip/apps/sntp.h"
 #include "lwip/dns.h"
 
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
 #include <time.h>
+#include <Update.h>
 
 #define UPTIME_OVERFLOW 4294967295 // Uptime overflow value
 
@@ -123,10 +124,13 @@ char *getUptime(void) {
 
 void ntp_dns_found(const char *name, const ip4_addr *addr, void *arg) {
   sntp_stop();
-  sntp_setserver(ntpservers++, addr);
+  struct ip_addr ip;
+  ip.u_addr.ip4.addr = addr->addr;
+  sntp_setserver(ntpservers++, &ip);
   sntp_init();
 }
 
+/*
 void ntpReload(settingsStruct *heishamonSettings) {
   ip_addr_t addr;
   uint8_t len = strlen(heishamonSettings->ntp_servers);
@@ -160,9 +164,10 @@ void ntpReload(settingsStruct *heishamonSettings) {
   sntp_stop();
   tzStruct tz;
   memcpy_P(&tz, &tzdata[heishamonSettings->timezone], sizeof(tz));
-  setTZ(tz.value);
+  // setTZ(tz.value);
   sntp_init();
 }
+*/
 
 void loadSettings(settingsStruct *heishamonSettings) {
   //read configuration from FS json
@@ -230,7 +235,7 @@ void loadSettings(settingsStruct *heishamonSettings) {
           if (jsonDoc["s0_2_interval"] ) heishamonSettings->s0Settings[1].lowerPowerInterval = jsonDoc["s0_2_interval"];
           if (jsonDoc["s0_2_minpulsewidth"]) heishamonSettings->s0Settings[1].minimalPulseWidth = jsonDoc["s0_2_minpulsewidth"];
           if (jsonDoc["s0_2_maxpulsewidth"]) heishamonSettings->s0Settings[1].maximalPulseWidth = jsonDoc["s0_2_maxpulsewidth"];
-          ntpReload(heishamonSettings);
+          // ntpReload(heishamonSettings);
         } else {
           log_message(_F("Failed to load json config, forcing config reset."));
           WiFi.persistent(true);
@@ -256,7 +261,8 @@ void loadSettings(settingsStruct *heishamonSettings) {
 void setupWifi(settingsStruct *heishamonSettings) {
   log_message(_F("Wifi reconnecting with new configuration..."));
   //no sleep wifi
-  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+  // ESP32:Disabled
+  // WiFi.setSleepMode(WIFI_NONE_SLEEP);
   WiFi.mode(WIFI_AP_STA);
   WiFi.disconnect(true);
   WiFi.softAPdisconnect(true);
@@ -881,7 +887,8 @@ int handleWifiScan(struct webserver_t *client) {
     webserver_send_content(client, str, strlen(str));
   }
   //initatie a new async scan for next try
-  WiFi.scanNetworksAsync(getWifiScanResults);
+  // ESP32:Disabled
+  // WiFi.scanNetworksAsync(getWifiScanResults);
   return 0;
 }
 
@@ -1001,14 +1008,11 @@ int handleRoot(struct webserver_t *client, float readpercentage, int mqttReconne
   return 0;
 }
 
+/*
 int handleTableRefresh(struct webserver_t *client, char* actData, char* actDataExtra, bool extraDataBlockAvailable) {
   int ret = 0;
   int extraTopics = extraDataBlockAvailable ? NUMBER_OF_TOPICS_EXTRA : 0; //set to 0 if there is no datablock so we don't run table data for it
   if (client->route == 11) {
-    if (client->content == 0) {
-      webserver_send(client, 200, (char *)"text/html", 0);
-      dallasTableOutput(client);
-    }
   } else if (client->route == 12) {
     if (client->content == 0) {
       webserver_send(client, 200, (char *)"text/html", 0);
@@ -1104,9 +1108,9 @@ int handleTableRefresh(struct webserver_t *client, char* actData, char* actDataE
   }
   return 0;
 }
+*/
 
-
-
+/*
 int handleJsonOutput(struct webserver_t *client, char* actData, char* actDataExtra, settingsStruct *heishamonSettings, bool extraDataBlockAvailable) {
   int extraTopics = extraDataBlockAvailable ? NUMBER_OF_TOPICS_EXTRA : 0; //set to 0 if there is no datablock so we don't run json data for it
   if (client->content == 0) {
@@ -1207,10 +1211,6 @@ int handleJsonOutput(struct webserver_t *client, char* actData, char* actDataExt
     client->content--; // The webserver also increases by 1
   } else if (client->content == (NUMBER_OF_TOPICS + extraTopics + 1)) {
     webserver_send_content_P(client, PSTR("]"), 1);
-    if (heishamonSettings->use_1wire) {
-      webserver_send_content_P(client, PSTR(",\"1wire\":"), 9);
-      dallasJsonOutput(client);
-    }
     if (heishamonSettings->use_s0 ) {
       webserver_send_content_P(client, PSTR(",\"s0\":"), 6);
       s0JsonOutput(client);
@@ -1223,7 +1223,7 @@ int handleJsonOutput(struct webserver_t *client, char* actData, char* actDataExt
   }
   return 0;
 }
-
+*/
 
 int showRules(struct webserver_t *client) {
   uint16_t len = 0, len1 = 0;
@@ -1351,16 +1351,18 @@ static void printUpdateError(char **out, uint8_t size) {
 #endif
   } else if (Update.getError() == UPDATE_ERROR_MD5) {
     snprintf_P(&(*out)[len], size - len, PSTR("MD5 Failed\n"));
-  } else if (Update.getError() == UPDATE_ERROR_SIGN) {
-    snprintf_P(&(*out)[len], size - len, PSTR("Signature verification failed"));
-  } else if (Update.getError() == UPDATE_ERROR_FLASH_CONFIG) {
-    snprintf_P(&(*out)[len], size - len, PSTR("Flash config wrong real: %d IDE: %d\n"), ESP.getFlashChipRealSize(), ESP.getFlashChipSize());
-  } else if (Update.getError() == UPDATE_ERROR_NEW_FLASH_CONFIG) {
-    snprintf_P(&(*out)[len], size - len, PSTR("new Flash config wrong real: %d\n"), ESP.getFlashChipRealSize());
+  // ESP32:Disabled
+  // } else if (Update.getError() == UPDATE_ERROR_SIGN) {
+  //   snprintf_P(&(*out)[len], size - len, PSTR("Signature verification failed"));
+  // } else if (Update.getError() == UPDATE_ERROR_FLASH_CONFIG) {
+  //   snprintf_P(&(*out)[len], size - len, PSTR("Flash config wrong real: %d IDE: %d\n"), ESP.getFlashChipRealSize(), ESP.getFlashChipSize());
+  // } else if (Update.getError() == UPDATE_ERROR_NEW_FLASH_CONFIG) {
+  //   snprintf_P(&(*out)[len], size - len, PSTR("new Flash config wrong real: %d\n"), ESP.getFlashChipRealSize());
   } else if (Update.getError() == UPDATE_ERROR_MAGIC_BYTE) {
     snprintf_P(&(*out)[len], size - len, PSTR("Magic byte is wrong, not 0xE9"));
-  } else if (Update.getError() == UPDATE_ERROR_BOOTSTRAP) {
-    snprintf_P(&(*out)[len], size - len, PSTR("Invalid bootstrapping state, reset ESP8266 before updating"));
+   // ESP32:Disabled    
+  // } else if (Update.getError() == UPDATE_ERROR_BOOTSTRAP) {
+  //   snprintf_P(&(*out)[len], size - len, PSTR("Invalid bootstrapping state, reset ESP8266 before updating"));
   } else {
     snprintf_P(&(*out)[len], size - len, PSTR("UNKNOWN"));
   }
