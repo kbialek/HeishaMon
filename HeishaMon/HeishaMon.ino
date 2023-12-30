@@ -409,6 +409,14 @@ void setupSerial() {
 
 void setupWifi() {
   WiFi.mode(WIFI_STA);
+  IPAddress ip, gateway, subnet;
+  ip.fromString(WIFI_ADDRESS);
+  gateway.fromString(WIFI_GATEWAY);
+  subnet.fromString(WIFI_SUBNET);
+  if (!WiFi.config(ip, gateway, subnet, IPAddress(), IPAddress())) {
+    Serial.println("STA Failed to configure");
+    return;
+  }
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   WiFi.printDiag(Serial);
 }
