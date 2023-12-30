@@ -449,22 +449,6 @@ void send_optionalpcb_query() {
     send_command(optionalPCBQuery, OPTIONALPCBQUERYSIZE);
 }
 
-void setupConditionals() {
-    // send_initial_query(); //maybe necessary but for now disable. CZ-TAW1 sends this query on boot
-
-    // load optional PCB data from flash
-    if (heishamonSettings.optionalPCB) {
-        if (loadOptionalPCB(optionalPCBQuery, OPTIONALPCBQUERYSIZE)) {
-            log_message(_F("Succesfully loaded optional PCB data from saved flash!"));
-        } else {
-            log_message(_F("Failed to load optional PCB data from flash!"));
-        }
-        delay(1500);               // need 1.5 sec delay before sending first datagram
-        send_optionalpcb_query();  // send one datagram already at start
-        lastOptionalPCBRunTime = millis();
-    }
-}
-
 void timer_cb(int nr) {
     // if (nr > 0) {
     //   rules_timer_cb(nr);
@@ -514,8 +498,6 @@ void setup() {
     setupWifi();
     setupMqtt();
     setupOTA();
-
-    setupConditionals();  // setup for routines based on settings
 
     connect();
 }
@@ -579,14 +561,6 @@ void loop() {
     if ((!sending) && (!heishamonSettings.listenonly) && (heishamonSettings.optionalPCB) && ((unsigned long)(millis() - lastOptionalPCBRunTime) > OPTIONALPCBQUERYTIME)) {
         lastOptionalPCBRunTime = millis();
         send_optionalpcb_query();
-        if ((unsigned long)(millis() - lastOptionalPCBSave) > (1000 * OPTIONALPCBSAVETIME)) {  // only save each 5 minutes
-            lastOptionalPCBSave = millis();
-            if (saveOptionalPCB(optionalPCBQuery, OPTIONALPCBQUERYSIZE)) {
-                log_message((char*)"Succesfully saved optional PCB data to flash!");
-            } else {
-                log_message((char*)"Failed to save optional PCB data to flash!");
-            }
-        }
     }
 
     // run the data query only each WAITTIME

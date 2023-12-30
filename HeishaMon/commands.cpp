@@ -1,5 +1,4 @@
 #include "commands.h"
-#include <LittleFS.h>
 
 //removed checksum from default query, is calculated in send_command
 byte initialQuery[] = {0x31, 0x05, 0x10, 0x01, 0x00, 0x00, 0x00};
@@ -11,8 +10,6 @@ const char* mqtt_topic_values PROGMEM = "main";
 const char* mqtt_topic_xvalues PROGMEM = "extra";
 const char* mqtt_topic_commands PROGMEM = "commands";
 const char* mqtt_topic_pcbvalues PROGMEM = "optional";
-const char* mqtt_topic_1wire PROGMEM = "1wire";
-const char* mqtt_topic_s0 PROGMEM = "s0";
 const char* mqtt_logtopic PROGMEM = "log";
 
 const char* mqtt_willtopic PROGMEM = "LWT";
@@ -881,31 +878,4 @@ void send_heatpump_command(char* topic, char *msg, bool (*send_command)(byte*, i
     }
   }
 
-}
-
-
-bool saveOptionalPCB(byte* command, int length) {
-  if (LittleFS.begin()) {
-    File pcbfile = LittleFS.open("/optionalpcb.raw", "w");
-    if (pcbfile) {
-      pcbfile.write(command, length);
-      pcbfile.close();
-      return true;
-    }
-
-  }
-  return false;
-}
-bool loadOptionalPCB(byte* command, int length) {
-  if (LittleFS.begin()) {
-    if (LittleFS.exists("/optionalpcb.raw")) {
-      File pcbfile = LittleFS.open("/optionalpcb.raw", "r");
-      if (pcbfile) {
-        pcbfile.read(command, length);
-        pcbfile.close();
-        return true;
-      }
-    }
-  }
-  return false;
 }
