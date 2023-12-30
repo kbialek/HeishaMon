@@ -2,12 +2,10 @@
 #define LWIP_INTERNAL
 
 #include <WiFi.h>
-// #include <mDNS.h>
 #include <DNSServer.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <DNSServer.h>
-// #include <DoubleResetDetect.h>
 
 #include <ArduinoJson.h>
 
@@ -16,12 +14,10 @@
 #include "src/common/stricmp.h"
 #include "src/common/log.h"
 #include "src/common/progmem.h"
-// #include "src/rules/rules.h"
 
 #include "webfunctions.h"
 #include "decode.h"
 #include "commands.h"
-// #include "rules.h"
 #include "version.h"
 
 DNSServer dnsServer;
@@ -164,32 +160,12 @@ void check_wifi()
     if (WiFi.softAPSSID() != "") {
       log_message(_F("WiFi (re)connected, shutting down hotspot..."));
       WiFi.softAPdisconnect(true);
-      // ESP32:Disabled
-      // MDNS.notifyAPChange();
     }
 
     if (firstConnectSinceBoot) { // this should start only when softap is down or else it will not work properly so run after the routine to disable softap
       firstConnectSinceBoot = false;
       lastMqttReconnectAttempt = 0; //initiate mqtt connection asap
       setupOTA();
-      // ESP32:Disabled
-      // MDNS.begin(heishamonSettings.wifi_hostname);
-      // MDNS.addService("http", "tcp", 80);
-
-      // ESP32:Disabled
-      // experimental::ESP8266WiFiGratuitous::stationKeepAliveSetIntervalMs(5000); //necessary for some users with bad wifi routers
-
-      // ESP32:Disabled
-      // if (heishamonSettings.wifi_ssid[0] == '\0') {
-      //   log_message(_F("WiFi connected without SSID and password in settings. Must come from persistent memory. Storing in settings."));
-      //   WiFi.SSID().toCharArray(heishamonSettings.wifi_ssid, 40);
-      //   WiFi.psk().toCharArray(heishamonSettings.wifi_password, 40);
-      //   DynamicJsonDocument jsonDoc(1024);
-      //   settingsToJson(jsonDoc, &heishamonSettings); //stores current settings in a json document
-      //   saveJsonToConfig(jsonDoc); //save to config file
-      // }
-
-      // ntpReload(&heishamonSettings);
     }
 
     /*
@@ -197,10 +173,6 @@ void check_wifi()
        it only starts the routine above after this timeout
     */
     lastWifiRetryTimer = millis();
-
-    // Allow MDNS processing
-    // ESP32:Disabled
-    // MDNS.update();
   }
 }
 
@@ -519,411 +491,6 @@ void setupOTA() {
   ArduinoOTA.begin();
 }
 
-/*
-int8_t webserver_cb(struct webserver_t *client, void *dat) {
-  switch (client->step) {
-    case WEBSERVER_CLIENT_REQUEST_METHOD: {
-        if (strcmp_P((char *)dat, PSTR("POST")) == 0) {
-          client->route = 110;
-        }
-        return 0;
-      } break;
-    case WEBSERVER_CLIENT_REQUEST_URI: {
-        if (strcmp_P((char *)dat, PSTR("/")) == 0) {
-          client->route = 1;
-        } else if (strcmp_P((char *)dat, PSTR("/tablerefresh")) == 0) {
-          client->route = 10;
-        } else if (strcmp_P((char *)dat, PSTR("/json")) == 0) {
-          client->route = 20;
-        } else if (strcmp_P((char *)dat, PSTR("/reboot")) == 0) {
-          client->route = 30;
-        } else if (strcmp_P((char *)dat, PSTR("/debug")) == 0) {
-          client->route = 40;
-          log_message(_F("Debug URL requested"));
-        } else if (strcmp_P((char *)dat, PSTR("/wifiscan")) == 0) {
-          client->route = 50;
-        } else if (strcmp_P((char *)dat, PSTR("/togglelog")) == 0) {
-          client->route = 1;
-          log_message(_F("Toggled mqtt log flag"));
-          heishamonSettings.logMqtt ^= true;
-        } else if (strcmp_P((char *)dat, PSTR("/togglehexdump")) == 0) {
-          client->route = 1;
-          log_message(_F("Toggled hexdump log flag"));
-          heishamonSettings.logHexdump ^= true;
-        } else if (strcmp_P((char *)dat, PSTR("/hotspot-detect.html")) == 0 ||
-                   strcmp_P((char *)dat, PSTR("/fwlink")) == 0 ||
-                   strcmp_P((char *)dat, PSTR("/generate_204")) == 0 ||
-                   strcmp_P((char *)dat, PSTR("/gen_204")) == 0 ||
-                   strcmp_P((char *)dat, PSTR("/popup")) == 0) {
-          client->route = 80;
-        } else if (strcmp_P((char *)dat, PSTR("/factoryreset")) == 0) {
-          client->route = 90;
-        } else if (strcmp_P((char *)dat, PSTR("/command")) == 0) {
-          if ((client->userdata = malloc(1)) == NULL) {
-            Serial1.printf(PSTR("Out of memory %s:#%d\n"), __FUNCTION__, __LINE__);
-            ESP.restart();
-            exit(-1);
-          }
-          ((char *)client->userdata)[0] = 0;
-          client->route = 100;
-        } else if (client->route == 110) {
-          // Only accept settings POST requests
-          if (strcmp_P((char *)dat, PSTR("/savesettings")) == 0) {
-            client->route = 110;
-          } else if (strcmp_P((char *)dat, PSTR("/saverules")) == 0) {
-            client->route = 170;
-
-            if (LittleFS.begin()) {
-              LittleFS.remove("/rules.new");
-              client->userdata = new File(LittleFS.open("/rules.new", "a+"));
-            }
-          } else if (strcmp_P((char *)dat, PSTR("/firmware")) == 0) {
-            if (!Update.isRunning()) {
-              Update.runAsync(true);
-              if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
-                Update.printError(Serial1);
-                return -1;
-              } else {
-                client->route = 150;
-              }
-            } else {
-              Serial1.println(PSTR("New firmware update client, while previous isn't finished yet! Assume broken connection, abort!"));
-              Update.end();
-              return -1;
-            }
-          } else {
-            return -1;
-          }
-        } else if (strcmp_P((char *)dat, PSTR("/settings")) == 0) {
-          client->route = 120;
-        } else if (strcmp_P((char *)dat, PSTR("/getsettings")) == 0) {
-          client->route = 130;
-        } else if (strcmp_P((char *)dat, PSTR("/firmware")) == 0) {
-          client->route = 140;
-        } else if (strcmp_P((char *)dat, PSTR("/rules")) == 0) {
-          client->route = 160;
-        } else {
-          client->route = 0;
-        }
-
-        return 0;
-      } break;
-    case WEBSERVER_CLIENT_ARGS: {
-        struct arguments_t *args = (struct arguments_t *)dat;
-        switch (client->route) {
-          case 10: {
-              if (strcmp_P((char *)args->name, PSTR("1wire")) == 0) {
-                client->route = 11;
-              } else if (strcmp_P((char *)args->name, PSTR("s0")) == 0) {
-                client->route = 12;
-              } else if (strcmp_P((char *)args->name, PSTR("opentherm")) == 0) {
-                client->route = 13;
-              }
-            } break;
-          case 100: {
-              unsigned char cmd[256] = { 0 };
-              char cpy[args->len + 1];
-              char log_msg[256] = { 0 };
-              unsigned int len = 0;
-
-              memset(&cpy, 0, args->len + 1);
-              snprintf((char *)&cpy, args->len + 1, "%.*s", args->len, args->value);
-
-              for (uint8_t x = 0; x < sizeof(commands) / sizeof(commands[0]); x++) {
-                cmdStruct tmp;
-                memcpy_P(&tmp, &commands[x], sizeof(tmp));
-                if (strcmp((char *)args->name, tmp.name) == 0) {
-                  len = tmp.func(cpy, cmd, log_msg);
-                  if ((client->userdata = realloc(client->userdata, strlen((char *)client->userdata) + strlen(log_msg) + 2)) == NULL) {
-                    Serial1.printf(PSTR("Out of memory %s:#%d\n"), __FUNCTION__, __LINE__);
-                    ESP.restart();
-                    exit(-1);
-                  }
-                  strcat((char *)client->userdata, log_msg);
-                  strcat((char *)client->userdata, "\n");
-                  log_message(log_msg);
-                  send_command(cmd, len);
-                }
-              }
-
-              memset(&cmd, 256, 0);
-              memset(&log_msg, 256, 0);
-
-              if (heishamonSettings.optionalPCB) {
-                //optional commands
-                for (uint8_t x = 0; x < sizeof(optionalCommands) / sizeof(optionalCommands[0]); x++) {
-                  optCmdStruct tmp;
-                  memcpy_P(&tmp, &optionalCommands[x], sizeof(tmp));
-                  if (strcmp((char *)args->name, tmp.name) == 0) {
-                    len = tmp.func(cpy, log_msg);
-                    if ((client->userdata = realloc(client->userdata, strlen((char *)client->userdata) + strlen(log_msg) + 2)) == NULL) {
-                      Serial1.printf(PSTR("Out of memory %s:#%d\n"), __FUNCTION__, __LINE__);
-                      ESP.restart();
-                      exit(-1);
-                    }
-                    strcat((char *)client->userdata, log_msg);
-                    strcat((char *)client->userdata, "\n");
-                    log_message(log_msg);
-                  }
-                }
-              }
-            } break;
-          case 110: {
-              return cacheSettings(client, args);
-            } break;
-          case 150: {
-              if (Update.isRunning() && (!Update.hasError())) {
-                if ((strcmp((char *)args->name, "md5") == 0) && (args->len > 0)) {
-                  char md5[args->len + 1];
-                  memset(&md5, 0, args->len + 1);
-                  snprintf((char *)&md5, args->len + 1, "%.*s", args->len, args->value);
-                  sprintf_P(log_msg, PSTR("Firmware MD5 expected: %s"), md5);
-                  log_message(log_msg);
-                  if (!Update.setMD5(md5)) {
-                    log_message(_F("Failed to set expected update file MD5!"));
-                    Update.end(false);
-                  }
-                } else if (strcmp((char *)args->name, "firmware") == 0) {
-                  if (Update.write((uint8_t *)args->value, args->len) != args->len) {
-                    Update.printError(Serial1);
-                    Update.end(false);
-                  } else {
-                    if (uploadpercentage != (unsigned int)(((float)client->readlen / (float)client->totallen) * 20)) {
-                      uploadpercentage = (unsigned int)(((float)client->readlen / (float)client->totallen) * 20);
-                      sprintf_P(log_msg, PSTR("Uploading new firmware: %d%%"), uploadpercentage * 5);
-                      log_message(log_msg);
-                    }
-                  }
-                }
-              } else {
-                log_message((char*)"New firmware POST data but update not running anymore!");
-              }
-            } break;
-          case 170: {
-              File *f = (File *)client->userdata;
-              if (!f || !*f) {
-                client->route = 160;
-              } else {
-                f->write(args->value, args->len);
-              }
-            } break;
-        }
-      } break;
-    case WEBSERVER_CLIENT_HEADER: {
-        struct arguments_t *args = (struct arguments_t *)dat;
-        return 0;
-      } break;
-    case WEBSERVER_CLIENT_WRITE: {
-        switch (client->route) {
-          case 0: {
-              if (client->content == 0) {
-                webserver_send(client, 404, (char *)"text/plain", 13);
-                webserver_send_content_P(client, PSTR("404 Not found"), 13);
-              }
-              return 0;
-            } break;
-          case 1: {
-              return handleRoot(client, readpercentage, mqttReconnects, &heishamonSettings);
-            } break;
-          case 10:
-          case 11:
-          case 12:
-          case 13: {
-              return handleTableRefresh(client, actData, actDataExtra, extraDataBlockAvailable);
-            } break;
-          case 20: {
-              return handleJsonOutput(client, actData, actDataExtra, &heishamonSettings, extraDataBlockAvailable);
-            } break;
-          case 30: {
-              return handleReboot(client);
-            } break;
-          case 40: {
-              return handleDebug(client, (char *)data, 203);
-            } break;
-          case 50: {
-              return handleWifiScan(client);
-            } break;
-          case 80: {
-              return handleSettings(client);
-            } break;
-          case 90: {
-              return handleFactoryReset(client);
-            } break;
-          case 100: {
-              if (client->content == 0) {
-                webserver_send(client, 200, (char *)"text/plain", 0);
-                char *RESTmsg = (char *)client->userdata;
-                webserver_send_content(client, (char *)RESTmsg, strlen(RESTmsg));
-                free(RESTmsg);
-                client->userdata = NULL;
-              }
-              return 0;
-            } break;
-          case 110: {
-              int ret = saveSettings(client, &heishamonSettings);
-              if ((!heishamonSettings.opentherm) && (heishamonSettings.listenonly)) {
-                //make sure we disable TX to heatpump-RX using the mosfet so this line is floating and will not disturb cz-taw1
-                //does not work for opentherm version currently
-                digitalWrite(5, LOW);
-              } else {
-                digitalWrite(5, HIGH);
-              }
-              switch (client->route) {
-                case 111: {
-                    return settingsNewPassword(client, &heishamonSettings);
-                  } break;
-                case 112: {
-                    return settingsReconnectWifi(client, &heishamonSettings);
-                  } break;
-                case 113: {
-                    webserver_send(client, 301, (char *)"text/plain", 0);
-                  } break;
-              }
-              return 0;
-            } break;
-          case 111: {
-              return settingsNewPassword(client, &heishamonSettings);
-            } break;
-          case 112: {
-              return settingsReconnectWifi(client, &heishamonSettings);
-            } break;
-          case 120: {
-              return handleSettings(client);
-            } break;
-          case 130: {
-              return getSettings(client, &heishamonSettings);
-            } break;
-          case 140: {
-              return showFirmware(client);
-            } break;
-          case 150: {
-              log_message((char*)"In /firmware client write part");
-              if (Update.isRunning()) {
-                if (Update.end(true)) {
-                  log_message((char*)"Firmware update success");
-                  timerqueue_insert(2, 0, -2); // Start reboot sequence
-                  return showFirmwareSuccess(client);
-                } else {
-                  Update.printError(Serial1);
-                  return showFirmwareFail(client);
-                }
-              }
-              return 0;
-            } break;
-          case 160: {
-              return showRules(client);
-            } break;
-          case 170: {
-              File *f = (File *)client->userdata;
-              if (f) {
-                if (*f) {
-                  f->close();
-                }
-                delete f;
-              }
-              client->userdata = NULL;
-              timerqueue_insert(0, 1, -4);
-              webserver_send(client, 301, (char *)"text/plain", 0);
-            } break;
-          default: {
-              webserver_send(client, 301, (char *)"text/plain", 0);
-            } break;
-        }
-        return -1;
-      } break;
-    case WEBSERVER_CLIENT_CREATE_HEADER: {
-        struct header_t *header = (struct header_t *)dat;
-        switch (client->route) {
-          case 113: {
-              header->ptr += sprintf_P((char *)header->buffer, PSTR("Location: /settings"));
-              return -1;
-            } break;
-          case 60:
-          case 70: {
-              header->ptr += sprintf_P((char *)header->buffer, PSTR("Location: /"));
-              return -1;
-            } break;
-          case 170: {
-              header->ptr += sprintf_P((char *)header->buffer, PSTR("Location: /rules"));
-              return -1;
-            } break;
-          default: {
-              if (client->route != 0) {
-                header->ptr += sprintf_P((char *)header->buffer, PSTR("Access-Control-Allow-Origin: *"));
-              }
-            } break;
-        }
-        return 0;
-      } break;
-    case WEBSERVER_CLIENT_CLOSE: {
-        switch (client->route) {
-          case 100: {
-              if (client->userdata != NULL) {
-                free(client->userdata);
-              }
-            } break;
-          case 110: {
-              struct websettings_t *tmp = NULL;
-              while (client->userdata) {
-                tmp = (struct websettings_t *)client->userdata;
-                client->userdata = ((struct websettings_t *)(client->userdata))->next;
-                free(tmp);
-              }
-            } break;
-          case 160:
-          case 170: {
-              if (client->userdata != NULL) {
-                File *f = (File *)client->userdata;
-                if (f) {
-                  if (*f) {
-                    f->close();
-                  }
-                  delete f;
-                }
-              }
-            } break;
-        }
-        client->userdata = NULL;
-      } break;
-    default: {
-        return 0;
-      } break;
-  }
-
-  return 0;
-}
-*/
-
-// ESP32:Disabled
-// void setupHttp() {
-//   webserver_start(80, &webserver_cb, 0);
-// }
-
-// void doubleResetDetect() {
-//   if (drd.detect()) {
-//     Serial.println("Double reset detected, clearing config."); //save to print on std serial because serial switch didn't happen yet
-//     LittleFS.begin();
-//     LittleFS.format();
-//     //create first boot file
-//     File startupFile = LittleFS.open("/heishamon", "w");
-//     startupFile.close();    
-//     WiFi.persistent(true);
-//     WiFi.disconnect();
-//     WiFi.persistent(false);
-//     Serial.println("Config cleared. Please reset to configure this device...");
-//     //initiate debug led indication for factory reset
-//     pinMode(2, FUNCTION_0); //set it as gpio
-//     pinMode(2, OUTPUT);
-//     while (true) {
-//       digitalWrite(2, HIGH);
-//       delay(100);
-//       digitalWrite(2, LOW);
-//       delay(100);
-//     }
-
-//   }
-// }
-
 void setupSerial() {
   //boot issue's first on normal serial
   // Serial.begin(115200);
@@ -1056,29 +623,6 @@ void setup() {
   Serial.println(F("--- HEISHAMON ---"));
   Serial.println(F("starting..."));
 
-  //first boot check, to visually confirm good flash
-  // if (LittleFS.begin()) {
-  //   if (LittleFS.exists("/heishamon")) {
-  //     //normal boot
-  //   } else if (LittleFS.exists("/config.json")) {
-  //     //from old firmware, create file and then normal boot
-  //     File startupFile = LittleFS.open("/heishamon", "w");
-  //     startupFile.close();    
-  //   } else {
-  //     //first boot
-  //     File startupFile = LittleFS.open("/heishamon", "w");
-  //     startupFile.close();    
-  //     pinMode(2, FUNCTION_0); //set it as gpio
-  //     pinMode(2, OUTPUT);
-  //     while (true) {
-  //       digitalWrite(2, HIGH);
-  //       delay(50);
-  //       digitalWrite(2, LOW);
-  //       delay(50);
-  //     }
-  //   }
-  // }
-
   WiFi.printDiag(Serial);
   //initiate a wifi scan at boot to prefill the wifi scan json list
   byte numSsid = WiFi.scanNetworks();
@@ -1102,22 +646,6 @@ void setup() {
 
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
   dnsServer.start(DNS_PORT, "*", apIP);
-
-  // ESP32:Disabled
-  // rst_info *resetInfo = ESP.getResetInfoPtr();
-  // Serial1.printf(PSTR("Reset reason: %d, exception cause: %d\n"), resetInfo->reason, resetInfo->exccause);
-
-  // if (resetInfo->reason > 0 && resetInfo->reason < 4) {
-  //   if (LittleFS.begin()) {
-  //     LittleFS.rename("/rules.txt", "/rules.old");
-  //   }
-  //   rules_setup();
-  //   if (LittleFS.begin()) {
-  //     LittleFS.rename("/rules.old", "/rules.txt");
-  //   }
-  // } else {
-  //   rules_setup();
-  // }
 }
 
 void send_initial_query() {
@@ -1186,8 +714,6 @@ void loop() {
     log_message(_F("Sending command from buffer"));
     popCommandBuffer();
   }
-
-  // if (heishamonSettings.use_1wire) dallasLoop(mqtt_client, log_message, heishamonSettings.mqtt_topic_base);
 
   if (heishamonSettings.use_s0) s0Loop(mqtt_client, log_message, heishamonSettings.mqtt_topic_base, heishamonSettings.s0Settings);
 
