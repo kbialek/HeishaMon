@@ -91,41 +91,6 @@ bool firstConnectSinceBoot = true; //if this is true there is no first connectio
 struct timerqueue_t **timerqueue = NULL;
 int timerqueue_size = 0;
 
-void mqtt_reconnect()
-{
-  unsigned long now = millis();
-  if ((lastMqttReconnectAttempt == 0) || ((unsigned long)(now - lastMqttReconnectAttempt) > MQTTRECONNECTTIMER)) { //only try reconnect each MQTTRECONNECTTIMER seconds or on boot when lastMqttReconnectAttempt is still 0
-    lastMqttReconnectAttempt = now;
-    log_message(_F("Reconnecting to mqtt server ..."));
-    char topic[256];
-    sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_willtopic);
-    if (mqtt_client.connect(heishamonSettings.wifi_hostname, heishamonSettings.mqtt_username, heishamonSettings.mqtt_password, topic, 1, true, "Offline"))
-    {
-      mqttReconnects++;
-      sprintf(topic, "%s/%s/#", heishamonSettings.mqtt_topic_base, mqtt_topic_commands);
-      mqtt_client.subscribe(topic);
-      sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_send_raw_value_topic);
-      mqtt_client.subscribe(topic);
-      sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_willtopic);
-      mqtt_client.publish(topic, "Online");
-      sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_iptopic);
-      mqtt_client.publish(topic, WiFi.localIP().toString().c_str(), true);
-
-      if (mqttReconnects == 1) { //only resend all data on first connect to mqtt so a data bomb like and bad mqtt server will not cause a reconnect bomb everytime
-        resetlastalldatatime(); //resend all heatpump values to mqtt
-      }
-      //use this to receive valid heishamon raw data from other heishamon to debug this OT code
-#define OTDEBUG
-#ifdef OTDEBUG
-      if ( heishamonSettings.listenonly && heishamonSettings.listenmqtt ) {
-        sprintf(topic, "%s/raw/data", heishamonSettings.mqtt_topic_listen);
-        mqtt_client.subscribe(topic); //subscribe to raw heatpump data over MQTT
-      }
-#endif
-    }
-  }
-}
-
 void log_message(char* string)
 {
   time_t rawtime;
@@ -356,8 +321,8 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
       log_message(log_msg);
       decode_heatpump_data(msg, actData, mqtt_client, log_message, heishamonSettings.mqtt_topic_base, heishamonSettings.updateAllTime);
       memcpy(actData, msg, DATASIZE);
-#endif
     }
+#endif
     mqttcallbackinprogress = false;
   }
 }
@@ -376,20 +341,34 @@ void connect_wifi() {
 }
 
 void connect_mqtt() {
-    // Serial.print("\nconnecting...");
-    // while (!mqtt_client.connect("esp32-dev", "mqtt_user", "-ofannEer8")) {
-    //     Serial.print(".");
-    //     delay(1000);
-    // }
+  unsigned long now = millis();
+  if ((lastMqttReconnectAttempt == 0) || ((unsigned long)(now - lastMqttReconnectAttempt) > MQTTRECONNECTTIMER)) { //only try reconnect each MQTTRECONNECTTIMER seconds or on boot when lastMqttReconnectAttempt is still 0
+    lastMqttReconnectAttempt = now;
+    log_message(_F("Reconnecting to mqtt server ..."));
+    char topic[256];
+    sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_willtopic);
+    if (mqtt_client.connect("heishamon", MQTT_USERNAME, MQTT_PASSWORD, topic, 1, true, "Offline"))
+    {
+      mqttReconnects++;
+      sprintf(topic, "%s/%s/#", heishamonSettings.mqtt_topic_base, mqtt_topic_commands);
+      mqtt_client.subscribe(topic);
+      sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_send_raw_value_topic);
+      mqtt_client.subscribe(topic);
+      sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_willtopic);
+      mqtt_client.publish(topic, "Online");
+      sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_iptopic);
+      mqtt_client.publish(topic, WiFi.localIP().toString().c_str(), true);
 
-    // Serial.println("\nconnected!");
-
-    // mqtt_client.subscribe("/test/hello/command");
+      if (mqttReconnects == 1) { //only resend all data on first connect to mqtt so a data bomb like and bad mqtt server will not cause a reconnect bomb everytime
+        resetlastalldatatime(); //resend all heatpump values to mqtt
+      }
+    }
+  }
 }
 
 void connect() {
     connect_wifi();
-    // connect_mqtt();
+    connect_mqtt();
 }
 
 void setupOTA() {
@@ -436,7 +415,7 @@ void setupWifi() {
 void setupMqtt() {
   mqtt_client.setBufferSize(1024);
   mqtt_client.setSocketTimeout(10); mqtt_client.setKeepAlive(5); //fast timeout, any slower will block the main loop too long
-  mqtt_client.setServer(heishamonSettings.mqtt_server, atoi(heishamonSettings.mqtt_port));
+  mqtt_client.setServer(MQTT_SERVER, atoi(heishamonSettings.mqtt_port));
   mqtt_client.setCallback(mqtt_callback);
 }
 
@@ -598,7 +577,7 @@ void loop() {
     if ( (WiFi.isConnected()) && (!mqtt_client.connected()) )
     {
       log_message(_F("Lost MQTT connection!"));
-      mqtt_reconnect();
+      connect();
     }
 
     //log stats
