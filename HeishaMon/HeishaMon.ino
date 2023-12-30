@@ -6,7 +6,6 @@
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 
-#include "lwip/apps/sntp.h"
 #include "src/common/timerqueue.h"
 #include "src/common/stricmp.h"
 #include "src/common/log.h"
@@ -584,8 +583,6 @@ void setup() {
   WiFi.printDiag(Serial);
   //initiate a wifi scan at boot to prefill the wifi scan json list
   byte numSsid = WiFi.scanNetworks();
-  // ESP32:Disabled
-  // getWifiScanResults(numSsid);
 
   loadSettings(&heishamonSettings);
 
@@ -593,9 +590,6 @@ void setup() {
 
   setupMqtt();
   // setupHttp();
-
-  sntp_setoperatingmode(SNTP_OPMODE_POLL);
-  sntp_init();
 
   switchSerial(); //switch serial to gpio13/gpio15
   WiFi.printDiag(Serial1);
@@ -752,11 +746,6 @@ void loop() {
     //Make sure the LWT is set to Online, even if the broker have marked it dead.
     sprintf_P(mqtt_topic, PSTR("%s/%s"), heishamonSettings.mqtt_topic_base, mqtt_willtopic);
     mqtt_client.publish(mqtt_topic, "Online");
-
-    if (WiFi.isConnected()) {
-      // ESP32:Disabled
-      // MDNS.announce();
-    }
   }
 
   timerqueue_update();
