@@ -20,11 +20,9 @@ extern PubSubClient mqtt_client;
 extern const char* mqtt_logtopic;
 
 void _logprintln(const char *file, unsigned int line, char *msg) {
-  if(heishamonSettings.logSerial1) {
-    Serial1.print(millis());
-    Serial1.print(": ");
-    Serial1.println(msg);
-  }
+  Serial.print(millis());
+  Serial.print(": ");
+  Serial.println(msg);
 }
 
 void _logprintf(const char *file, unsigned int line, char *fmt, ...) {

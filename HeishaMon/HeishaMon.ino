@@ -5,6 +5,7 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
+#include <HardwareSerial.h>
 
 #include "src/common/timerqueue.h"
 #include "src/common/stricmp.h"
@@ -196,9 +197,7 @@ void log_message(char* string)
   char* log_line = (char *) malloc(len);
   snprintf(log_line, len, "%s (%lu): %s", timestring, millis(), string);
 
-  if (heishamonSettings.logSerial1) {
-    Serial1.println(log_line);
-  }
+  logprintln(log_line);
   if (heishamonSettings.logMqtt && mqtt_client.connected())
   {
     char log_topic[256];
@@ -206,9 +205,9 @@ void log_message(char* string)
 
     if (!mqtt_client.publish(log_topic, log_line)) {
       if (heishamonSettings.logSerial1) {
-        Serial1.print(millis());
-        Serial1.print(F(": "));
-        Serial1.println(F("MQTT publish log message failed!"));
+        Serial.print(millis());
+        Serial.print(F(": "));
+        Serial.println(F("MQTT publish log message failed!"));
       }
       mqtt_client.disconnect();
     }
@@ -256,8 +255,8 @@ bool isValidReceiveChecksum() {
 bool readSerial()
 {
   int len = 0;
-  while ((Serial.available()) && ((data_length + len) < MAXDATASIZE)) {
-    data[data_length + len] = Serial.read(); //read available data and place it after the last received data
+  while ((Serial1.available()) && ((data_length + len) < MAXDATASIZE)) {
+    data[data_length + len] = Serial1.read(); //read available data and place it after the last received data
     len++;
     if (data[0] != 113) { //wrong header received!
       log_message(_F("Received bad header. Ignoring this data!"));
@@ -372,8 +371,8 @@ bool send_command(byte* command, int length) {
   sending = true; //simple semaphore to only allow one send command at a time, semaphore ends when answered data is received
 
   byte chk = calcChecksum(command, length);
-  int bytesSent = Serial.write(command, length); //first send command
-  bytesSent += Serial.write(chk); //then calculcated checksum byte afterwards
+  int bytesSent = Serial1.write(command, length); //first send command
+  bytesSent += Serial1.write(chk); //then calculcated checksum byte afterwards
   sprintf_P(log_msg, PSTR("sent bytes: %d including checksum value: %d "), bytesSent, int(chk));
   log_message(log_msg);
 
@@ -447,51 +446,15 @@ void setupOTA() {
 }
 
 void setupSerial() {
-  //boot issue's first on normal serial
+  // logger port
   Serial.begin(115200);
   Serial.flush();
-}
 
-void setupSerial1() {
-  // if (heishamonSettings.logSerial1) { //settings are not loaded yet, this is the startup default
-  //   //debug line on serial1 (D4, GPIO2)
-  //   Serial1.begin(115200);
-  //   Serial1.print(F("Starting debugging, version: "));
-  //   Serial1.println(heishamon_version);
-  // }
-  // else {
-  //   pinMode(2, FUNCTION_0); //set it as gpio
-  // }
-}
+  Serial1.begin(9600);
+  Serial1.flush();
 
-void switchSerial() {
-  // Serial.println(F("Switching serial to connect to heatpump. Look for debug on serial1 (GPIO2) and mqtt log topic."));
-  // //serial to cn-cnt
-  // Serial.flush();
-  // Serial.end();
-  // Serial.begin(9600, SERIAL_8E1);
-  // Serial.flush();
-  // //turn on GPIO's on tx/rx for opentherm part
-  // pinMode(1, FUNCTION_3);
-  // pinMode(3, FUNCTION_3);
-
-  // setupGPIO(heishamonSettings.gpioSettings); //switch extra GPIOs to configured mode
-
-  // //mosfet output enable
-  // pinMode(5, OUTPUT);
-
-  // //try to detect if cz-taw1 is connected in parallel
-  // if (!heishamonSettings.listenonly) {
-  //   if (Serial.available() > 0) {
-  //     log_message(_F("There is data on the line without asking for it. Switching to listen only mode."));
-  //     heishamonSettings.listenonly = true;
-  //   }
-  //   else {
-  //     //enable gpio15 after boot using gpio5 (D1) which enables the level shifter for the tx to panasonic
-  //     //do not enable if listen only to keep the line floating
-  //     digitalWrite(5, HIGH);
-  //   }
-  // }
+  Serial2.begin(9600);
+  Serial2.flush();
 }
 
 void setupMqtt() {
@@ -562,7 +525,6 @@ void setup() {
   getFreeMemory();
 
   setupSerial();
-  setupSerial1();
 
   Serial.println();
   Serial.println(F("--- HEISHAMON ---"));
@@ -577,10 +539,8 @@ void setup() {
   setupWifi(&heishamonSettings);
 
   setupMqtt();
-  // setupHttp();
 
-  switchSerial(); //switch serial to gpio13/gpio15
-  WiFi.printDiag(Serial1);
+  WiFi.printDiag(Serial);
 
   setupConditionals(); //setup for routines based on settings
 }
@@ -632,7 +592,7 @@ void read_panasonic_data() {
     data_length = 0; //clear any data in array
     sending = false; //receiving the answer from the send command timed out, so we are allowed to send a new command
   }
-  if ( (heishamonSettings.listenonly || sending) && (Serial.available() > 0)) readSerial();
+  if ( (heishamonSettings.listenonly || sending) && (Serial1.available() > 0)) readSerial();
 }
 
 void loop() {
