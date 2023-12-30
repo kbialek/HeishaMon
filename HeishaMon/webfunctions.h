@@ -16,10 +16,6 @@ struct settingsStruct {
 
   const char* update_path = "/firmware";
   const char* update_username = "admin";
-  char wifi_ssid[33] = "";
-  char wifi_password[65] = "";
-  char wifi_hostname[40] = "HeishaMon";
-  char ota_password[40] = "heisha";
   char mqtt_server[64];
   char mqtt_port[6] = "1883";
   char mqtt_username[64];
