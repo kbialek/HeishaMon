@@ -509,8 +509,6 @@ void setup() {
   //initiate a wifi scan at boot to prefill the wifi scan json list
   byte numSsid = WiFi.scanNetworks();
 
-  loadSettings(&heishamonSettings);
-
   setupWifi();
 
   setupMqtt();

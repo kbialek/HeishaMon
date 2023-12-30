@@ -1,18 +1,10 @@
 #define LWIP_INTERNAL
 
-#include <WiFi.h>
-#include <PubSubClient.h>
-#include <WebSocketsServer.h>
-#include <ArduinoJson.h>
-#include <LittleFS.h>
-#include "gpio.h"
+#include <Arduino.h>
 
 #define HEATPUMP_VALUE_LEN    16
 
 void log_message(char* string);
-
-
-static IPAddress apIP(192, 168, 4, 1);
 
 struct settingsStruct {
   uint16_t waitTime = 5; // how often data is read from heatpump
@@ -42,13 +34,8 @@ struct settingsStruct {
   bool logMqtt = false; //log to mqtt from start
   bool logHexdump = false; //log hexdump from start
   bool logSerial1 = true; //log to serial1 (gpio2) from start
-
-  gpioSettingsStruct gpioSettings;
 };
 
-void setupConditionals();
 int getFreeMemory(void);
 int getWifiQuality(void);
 int getFreeMemory(void);
-void settingsToJson(DynamicJsonDocument &jsonDoc, settingsStruct *heishamonSettings);
-void loadSettings(settingsStruct *heishamonSettings);

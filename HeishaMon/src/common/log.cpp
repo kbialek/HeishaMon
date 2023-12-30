@@ -11,6 +11,7 @@
 #include <time.h>
 
 #include <Arduino.h>
+#include <PubSubClient.h>
 
 #include "mem.h"
 #include "../../webfunctions.h"
