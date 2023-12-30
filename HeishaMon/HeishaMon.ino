@@ -574,10 +574,6 @@ void setup() {
   //first get total memory before we do anything
   getFreeMemory();
 
-  //set boottime
-  char *up = getUptime();
-  free(up);
-
   setupSerial();
   setupSerial1();
 
@@ -702,18 +698,8 @@ void loop() {
     String message;
     message.reserve(384);
     message += F("Heishamon stats: Uptime: ");
-    char *up = getUptime();
-    message += up;
-    free(up);
     message += F(" ## Free memory: ");
     message += getFreeMemory();
-    // ESP32:Disabled
-    // message += F("% ## Heap fragmentation: ");
-    // message += ESP.getHeapFragmentation();
-    // message += F("% ## Max free block: ");
-    // message += ESP.getMaxFreeBlockSize();
-    // message += F(" bytes ## Free heap: ");
-    // message += ESP.getFreeHeap();
     message += F(" bytes ## Wifi: ");
     message += getWifiQuality();
     message += F("% (RSSI: ");

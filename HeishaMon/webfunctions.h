@@ -55,33 +55,8 @@ struct websettings_t {
 
 void setupConditionals();
 int getFreeMemory(void);
-char *getUptime(void);
 void setupWifi(settingsStruct *heishamonSettings);
 int getWifiQuality(void);
 int getFreeMemory(void);
-// void ntpReload(settingsStruct *heishamonSettings);
-
-// void log_message(char *string);
-// int8_t webserver_cb(struct webserver_t *client, void *data);
-// void getWifiScanResults(int numSsid);
-// int handleRoot(struct webserver_t *client, float readpercentage, int mqttReconnects, settingsStruct *heishamonSettings);
-// int handleTableRefresh(struct webserver_t *client, char* actData, char* actDataExtra, bool extraDataBlockAvailable);
-// int handleJsonOutput(struct webserver_t *client, char* actData, char* actDataExtra, settingsStruct *heishamonSettings, bool extraDataBlockAvailable);
-// int handleFactoryReset(struct webserver_t *client);
-// int handleReboot(struct webserver_t *client);
-// int handleDebug(struct webserver_t *client, char *hex, byte hex_len);
 void settingsToJson(DynamicJsonDocument &jsonDoc, settingsStruct *heishamonSettings);
-// void saveJsonToConfig(DynamicJsonDocument &jsonDoc);
 void loadSettings(settingsStruct *heishamonSettings);
-// int getSettings(struct webserver_t *client, settingsStruct *heishamonSettings);
-// int handleSettings(struct webserver_t *client);
-// int saveSettings(struct webserver_t *client, settingsStruct *heishamonSettings);
-// int settingsReconnectWifi(struct webserver_t *client, settingsStruct *heishamonSettings);
-// int settingsNewPassword(struct webserver_t *client, settingsStruct *heishamonSettings);
-// int cacheSettings(struct webserver_t *client, struct arguments_t * args);
-// int handleWifiScan(struct webserver_t *client);
-// void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length);
-// int showRules(struct webserver_t *client);
-// int showFirmware(struct webserver_t *client);
-// int showFirmwareSuccess(struct webserver_t *client);
-// int showFirmwareFail(struct webserver_t *client);
