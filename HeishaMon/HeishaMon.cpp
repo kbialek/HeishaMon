@@ -238,15 +238,6 @@ bool readSerial() {
     return false;
 }
 
-void popCommandBuffer() {
-    // to make sure we can pop a command from the buffer
-    if ((!sending) && cmdnrel > 0) {
-        send_command(cmdbuffer[cmdstart].data, cmdbuffer[cmdstart].length);
-        cmdstart = (cmdstart + 1) % (MAXCOMMANDSINBUFFER);
-        cmdnrel--;
-    }
-}
-
 void pushCommandBuffer(byte* command, int length) {
     if (cmdnrel + 1 > MAXCOMMANDSINBUFFER) {
         log_message(_F("Too much commands already in buffer. Ignoring this commands.\n"));
@@ -279,6 +270,15 @@ bool send_command(byte* command, int length) {
     if (heishamonSettings.logHexdump) logHex((char*)command, length);
     sendCommandReadTime = millis();  // set sendCommandReadTime when to timeout the answer of this command
     return true;
+}
+
+void popCommandBuffer() {
+    // to make sure we can pop a command from the buffer
+    if ((!sending) && cmdnrel > 0) {
+        send_command(cmdbuffer[cmdstart].data, cmdbuffer[cmdstart].length);
+        cmdstart = (cmdstart + 1) % (MAXCOMMANDSINBUFFER);
+        cmdnrel--;
+    }
 }
 
 // Callback function that is called when a message has been pushed to one of your topics.
@@ -425,6 +425,11 @@ void setupMqtt() {
     mqtt_client.setCallback(mqtt_callback);
 }
 
+void send_optionalpcb_query() {
+    log_message(_F("Sending optional PCB data"));
+    send_command(optionalPCBQuery, OPTIONALPCBQUERYSIZE);
+}
+
 void setupConditionals() {
     // send_initial_query(); //maybe necessary but for now disable. CZ-TAW1 sends this query on boot
 
@@ -519,11 +524,6 @@ void send_panasonic_query() {
             panasonicQuery[3] = 0x10;
         }
     }
-}
-
-void send_optionalpcb_query() {
-    log_message(_F("Sending optional PCB data"));
-    send_command(optionalPCBQuery, OPTIONALPCBQUERYSIZE);
 }
 
 void read_panasonic_data() {
