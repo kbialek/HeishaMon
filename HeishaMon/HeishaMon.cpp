@@ -107,11 +107,9 @@ void log_message(char* string) {
         sprintf(log_topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_logtopic);
 
         if (!mqtt_client.publish(log_topic, log_line)) {
-            if (heishamonSettings.logSerial1) {
-                Serial.print(millis());
-                Serial.print(F(": "));
-                Serial.println(F("MQTT publish log message failed!"));
-            }
+            Serial.print(millis());
+            Serial.print(F(": "));
+            Serial.println(F("MQTT publish log message failed!"));
             mqtt_client.disconnect();
         }
     }
