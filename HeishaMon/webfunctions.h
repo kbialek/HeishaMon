@@ -5,7 +5,6 @@
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-#include "src/common/webserver.h"
 #include "gpio.h"
 
 #define HEATPUMP_VALUE_LEN    16
@@ -45,12 +44,6 @@ struct settingsStruct {
   bool logSerial1 = true; //log to serial1 (gpio2) from start
 
   gpioSettingsStruct gpioSettings;
-};
-
-struct websettings_t {
-  String name;
-  String value;
-  struct websettings_t *next;
 };
 
 void setupConditionals();

@@ -213,7 +213,6 @@ void log_message(char* string)
       mqtt_client.disconnect();
     }
   }
-  websocket_write_all(log_line, strlen(log_line));
   free(log_line);
 }
 
@@ -449,8 +448,8 @@ void setupOTA() {
 
 void setupSerial() {
   //boot issue's first on normal serial
-  // Serial.begin(115200);
-  // Serial.flush();
+  Serial.begin(115200);
+  Serial.flush();
 }
 
 void setupSerial1() {
@@ -637,8 +636,6 @@ void read_panasonic_data() {
 }
 
 void loop() {
-  webserver_loop();
-
   // check wifi
   check_wifi();
   // Handle OTA first.

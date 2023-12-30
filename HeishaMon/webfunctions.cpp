@@ -3,7 +3,6 @@
 #include "version.h"
 #include "commands.h"
 #include "src/common/progmem.h"
-#include "src/common/webserver.h"
 #include "src/common/timerqueue.h"
 
 #include "lwip/apps/sntp.h"
