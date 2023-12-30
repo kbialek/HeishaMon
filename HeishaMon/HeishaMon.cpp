@@ -157,7 +157,13 @@ bool isValidReceiveChecksum() {
 bool readSerial() {
     int len = 0;
     while ((Serial1.available()) && ((data_length + len) < MAXDATASIZE)) {
-        data[data_length + len] = Serial1.read();  // read available data and place it after the last received data
+        int byte = Serial1.read();
+        // forward byte CZ-TAW
+        if (byte != -1) {
+            Serial2.write(byte);
+            Serial2.flush();
+        }
+        data[data_length + len] = byte;  // read available data and place it after the last received data
         len++;
         if (data[0] != 113) {  // wrong header received!
             log_message(_F("Received bad header. Ignoring this data!"));
@@ -396,10 +402,16 @@ void setupSerial() {
     Serial.begin(115200);
     Serial.flush();
 
-    Serial1.begin(9600);
+    // To Heatpump 
+    // RX Pin -> GPIO 18 (D18)
+    // TX Pin -> GPIO 19 (D19)
+    Serial1.begin(9600, SERIAL_8N1, 18, 19);
     Serial1.flush();
 
-    Serial2.begin(9600);
+    // To CZ-TAW
+    // RX Pin -> GPIO 16 (RX2)
+    // TX Pin -> GPIO 17 (TX2)
+    Serial2.begin(9600, SERIAL_8N1, 16, 17);
     Serial2.flush();
 }
 
