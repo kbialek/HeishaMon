@@ -1,7 +1,6 @@
 #include "webfunctions.h"
 #include "decode.h"
 #include "version.h"
-#include "htmlcode.h"
 #include "commands.h"
 #include "src/common/progmem.h"
 #include "src/common/webserver.h"

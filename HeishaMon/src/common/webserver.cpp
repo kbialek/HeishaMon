@@ -26,7 +26,6 @@
   #include "webserver.h"
   #include "strncasestr.h"
   #include "strnstr.h"
-  #include "unittest.h"
   #include "base64.h"
   #include "sha1.h"
 #else
