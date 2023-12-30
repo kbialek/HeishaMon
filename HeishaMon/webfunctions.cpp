@@ -1,17 +1,6 @@
 #include "webfunctions.h"
-// #include "decode.h"
-// #include "version.h"
-// #include "commands.h"
-// #include "src/common/progmem.h"
-// #include "src/common/timerqueue.h"
-
-// #include "lwip/apps/sntp.h"
-// #include "lwip/dns.h"
 
 #include <WiFi.h>
-// #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
-// #include <time.h>
-// #include <Update.h>
 
 void log_message(char* string);
 void log_message(const __FlashStringHelper *msg);

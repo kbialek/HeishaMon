@@ -430,6 +430,7 @@ void setupSerial() {
 void setupWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.printDiag(Serial);
 }
 
 void setupMqtt() {
@@ -505,15 +506,9 @@ void setup() {
   Serial.println(F("--- HEISHAMON ---"));
   Serial.println(F("starting..."));
 
-  WiFi.printDiag(Serial);
-  //initiate a wifi scan at boot to prefill the wifi scan json list
-  byte numSsid = WiFi.scanNetworks();
-
   setupWifi();
 
   setupMqtt();
-
-  WiFi.printDiag(Serial);
 
   setupConditionals(); //setup for routines based on settings
 
