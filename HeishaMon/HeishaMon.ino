@@ -16,17 +16,6 @@
 #include "commands.h"
 #include "version.h"
 
-// maximum number of seconds between resets that
-// counts as a double reset
-#define DRD_TIMEOUT 0.1
-
-// address to the block in the RTC user memory
-// change it if it collides with another usageb
-// of the address block
-#define DRD_ADDRESS 0x00
-
-const byte DNS_PORT = 53;
-
 #define SERIALTIMEOUT 2000 // wait until all 203 bytes are read, must not be too long to avoid blocking the code
 
 settingsStruct heishamonSettings;
