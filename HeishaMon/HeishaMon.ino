@@ -2,11 +2,8 @@
 #define LWIP_INTERNAL
 
 #include <WiFi.h>
-#include <DNSServer.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
-#include <DNSServer.h>
-
 #include <ArduinoJson.h>
 
 #include "lwip/apps/sntp.h"
@@ -19,11 +16,6 @@
 #include "decode.h"
 #include "commands.h"
 #include "version.h"
-
-DNSServer dnsServer;
-
-//to read bus voltage in stats
-// ADC_MODE(ADC_VCC);
 
 // maximum number of seconds between resets that
 // counts as a double reset
@@ -121,12 +113,6 @@ void check_wifi()
     log_message(_F("Weird case, WiFi seems disconnected but is not. Resetting WiFi!"));
     setupWifi(&heishamonSettings);
   } else if ((WiFi.status() != WL_CONNECTED) || (!WiFi.localIP()))  {
-    /*
-        if we are not connected to an AP
-        we must be in softAP so respond to DNS
-    */
-    dnsServer.processNextRequest();
-
     /* we need to stop reconnecting to a configured wifi network if there is a hotspot user connected
         also, do not disconnect if wifi network scan is active
     */
@@ -643,9 +629,6 @@ void setup() {
   WiFi.printDiag(Serial1);
 
   setupConditionals(); //setup for routines based on settings
-
-  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  dnsServer.start(DNS_PORT, "*", apIP);
 }
 
 void send_initial_query() {
