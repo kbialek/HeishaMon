@@ -206,15 +206,12 @@ void loadSettings(settingsStruct *heishamonSettings) {
           if ( jsonDoc["mqtt_password"] ) strncpy(heishamonSettings->mqtt_password, jsonDoc["mqtt_password"], sizeof(heishamonSettings->mqtt_password));
           if ( jsonDoc["ntp_servers"] ) strncpy(heishamonSettings->ntp_servers, jsonDoc["ntp_servers"], sizeof(heishamonSettings->ntp_servers));
           if ( jsonDoc["timezone"]) heishamonSettings->timezone = jsonDoc["timezone"];
-          heishamonSettings->use_1wire = ( jsonDoc["use_1wire"] == "enabled" ) ? true : false;
-          heishamonSettings->use_s0 = ( jsonDoc["use_s0"] == "enabled" ) ? true : false;
           heishamonSettings->listenonly = ( jsonDoc["listenonly"] == "enabled" ) ? true : false;
           heishamonSettings->listenmqtt = ( jsonDoc["listenmqtt"] == "enabled" ) ? true : false;
           heishamonSettings->logMqtt = ( jsonDoc["logMqtt"] == "enabled" ) ? true : false;
           heishamonSettings->logHexdump = ( jsonDoc["logHexdump"] == "enabled" ) ? true : false;
           heishamonSettings->logSerial1 = ( jsonDoc["logSerial1"] == "enabled" ) ? true : false;
           heishamonSettings->optionalPCB = ( jsonDoc["optionalPCB"] == "enabled" ) ? true : false;
-          heishamonSettings->opentherm = ( jsonDoc["opentherm"] == "enabled" ) ? true : false;
           if ( jsonDoc["waitTime"]) heishamonSettings->waitTime = jsonDoc["waitTime"];
           if (heishamonSettings->waitTime < 5) heishamonSettings->waitTime = 5;
           if ( jsonDoc["waitDallasTime"]) heishamonSettings->waitDallasTime = jsonDoc["waitDallasTime"];
@@ -225,17 +222,6 @@ void loadSettings(settingsStruct *heishamonSettings) {
           if (heishamonSettings->updateAllTime < heishamonSettings->waitTime) heishamonSettings->updateAllTime = heishamonSettings->waitTime;
           if ( jsonDoc["updataAllDallasTime"]) heishamonSettings->updataAllDallasTime = jsonDoc["updataAllDallasTime"];
           if (heishamonSettings->updataAllDallasTime < heishamonSettings->waitDallasTime) heishamonSettings->updataAllDallasTime = heishamonSettings->waitDallasTime;
-          if (jsonDoc["s0_1_gpio"]) heishamonSettings->s0Settings[0].gpiopin = jsonDoc["s0_1_gpio"];
-          if (jsonDoc["s0_1_ppkwh"]) heishamonSettings->s0Settings[0].ppkwh = jsonDoc["s0_1_ppkwh"];
-          if (jsonDoc["s0_1_interval"]) heishamonSettings->s0Settings[0].lowerPowerInterval = jsonDoc["s0_1_interval"];
-          if (jsonDoc["s0_1_minpulsewidth"]) heishamonSettings->s0Settings[0].minimalPulseWidth = jsonDoc["s0_1_minpulsewidth"];
-          if (jsonDoc["s0_1_maxpulsewidth"]) heishamonSettings->s0Settings[0].maximalPulseWidth = jsonDoc["s0_1_maxpulsewidth"];
-          if (jsonDoc["s0_2_gpio"]) heishamonSettings->s0Settings[1].gpiopin = jsonDoc["s0_2_gpio"];
-          if (jsonDoc["s0_2_ppkwh"]) heishamonSettings->s0Settings[1].ppkwh = jsonDoc["s0_2_ppkwh"];
-          if (jsonDoc["s0_2_interval"] ) heishamonSettings->s0Settings[1].lowerPowerInterval = jsonDoc["s0_2_interval"];
-          if (jsonDoc["s0_2_minpulsewidth"]) heishamonSettings->s0Settings[1].minimalPulseWidth = jsonDoc["s0_2_minpulsewidth"];
-          if (jsonDoc["s0_2_maxpulsewidth"]) heishamonSettings->s0Settings[1].maximalPulseWidth = jsonDoc["s0_2_maxpulsewidth"];
-          // ntpReload(heishamonSettings);
         } else {
           log_message(_F("Failed to load json config, forcing config reset."));
           WiFi.persistent(true);
@@ -347,16 +333,6 @@ void settingsToJson(DynamicJsonDocument &jsonDoc, settingsStruct *heishamonSetti
   jsonDoc["mqtt_port"] = heishamonSettings->mqtt_port;
   jsonDoc["mqtt_username"] = heishamonSettings->mqtt_username;
   jsonDoc["mqtt_password"] = heishamonSettings->mqtt_password;
-  if (heishamonSettings->use_1wire) {
-    jsonDoc["use_1wire"] = "enabled";
-  } else {
-    jsonDoc["use_1wire"] = "disabled";
-  }
-  if (heishamonSettings->use_s0) {
-    jsonDoc["use_s0"] = "enabled";
-  } else {
-    jsonDoc["use_s0"] = "disabled";
-  }
   if (heishamonSettings->listenonly) {
     jsonDoc["listenonly"] = "enabled";
   } else {
@@ -386,11 +362,6 @@ void settingsToJson(DynamicJsonDocument &jsonDoc, settingsStruct *heishamonSetti
     jsonDoc["optionalPCB"] = "enabled";
   } else {
     jsonDoc["optionalPCB"] = "disabled";
-  }
-  if (heishamonSettings->opentherm) {
-    jsonDoc["opentherm"] = "enabled";
-  } else {
-    jsonDoc["opentherm"] = "disabled";
   }
   jsonDoc["waitTime"] = heishamonSettings->waitTime;
   jsonDoc["waitDallasTime"] = heishamonSettings->waitDallasTime;
@@ -657,205 +628,6 @@ int settingsReconnectWifi(struct webserver_t *client, settingsStruct *heishamonS
   return 0;
 }
 
-int getSettings(struct webserver_t *client, settingsStruct *heishamonSettings) {
-  switch (client->content) {
-    case 0: {
-        webserver_send(client, 200, (char *)"application/json", 0);
-        webserver_send_content_P(client, PSTR("{\"wifi_hostname\":\""), 18);
-        webserver_send_content(client, heishamonSettings->wifi_hostname, strlen(heishamonSettings->wifi_hostname));
-        webserver_send_content_P(client, PSTR("\",\"wifi_ssid\":\""), 15);
-        webserver_send_content(client, heishamonSettings->wifi_ssid, strlen(heishamonSettings->wifi_ssid));
-      } break;
-    case 1: {
-        webserver_send_content_P(client, PSTR("\",\"wifi_password\":\""), 19);
-        webserver_send_content(client, heishamonSettings->wifi_password, strlen(heishamonSettings->wifi_password));
-        webserver_send_content_P(client, PSTR("\",\"current_ota_password\":\""), 26);
-        webserver_send_content_P(client, PSTR("\",\"new_ota_password\":\""), 22);
-      } break;
-    case 2: {
-        webserver_send_content_P(client, PSTR("\",\"mqtt_topic_base\":\""), 21);
-        webserver_send_content(client, heishamonSettings->mqtt_topic_base, strlen(heishamonSettings->mqtt_topic_base));
-        webserver_send_content_P(client, PSTR("\",\"mqtt_server\":\""), 17);
-        webserver_send_content(client, heishamonSettings->mqtt_server, strlen(heishamonSettings->mqtt_server));
-      } break;
-    case 3: {
-        webserver_send_content_P(client, PSTR("\",\"mqtt_port\":\""), 15);
-        webserver_send_content(client, heishamonSettings->mqtt_port, strlen(heishamonSettings->mqtt_port));
-        webserver_send_content_P(client, PSTR("\",\"mqtt_username\":\""), 19);
-        webserver_send_content(client, heishamonSettings->mqtt_username, strlen(heishamonSettings->mqtt_username));
-      } break;
-    case 4: {
-        webserver_send_content_P(client, PSTR("\",\"mqtt_password\":\""), 19);
-        webserver_send_content(client, heishamonSettings->mqtt_password, strlen(heishamonSettings->mqtt_password));
-        webserver_send_content_P(client, PSTR("\",\"ntp_servers\":\""), 17);
-        webserver_send_content(client, heishamonSettings->ntp_servers, strlen(heishamonSettings->ntp_servers));
-        webserver_send_content_P(client, PSTR("\",\"timezone\":"), 13);
-
-        {
-          char str[20];
-          itoa(heishamonSettings->timezone, str, 10);
-          webserver_send_content(client, str, strlen(str));
-        }
-
-        webserver_send_content_P(client, PSTR(",\"waitTime\":"), 12);
-
-        {
-          char str[20];
-          itoa(heishamonSettings->waitTime, str, 10);
-          webserver_send_content(client, str, strlen(str));
-        }
-      } break;
-    case 5: {
-        char str[20];
-        webserver_send_content_P(client, PSTR(",\"updateAllTime\":"), 17);
-
-        itoa(heishamonSettings->updateAllTime, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"listenonly\":"), 14);
-
-        itoa(heishamonSettings->listenonly, str, 10);
-        webserver_send_content(client, str, strlen(str));
-      } break;
-    case 6: {
-        char str[20];
-        webserver_send_content_P(client, PSTR(",\"listenmqtt\":"), 14);
-
-        itoa(heishamonSettings->listenmqtt, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"mqtt_topic_listen\":\""), 22);
-        webserver_send_content(client, heishamonSettings->mqtt_topic_listen, strlen(heishamonSettings->mqtt_topic_listen));
-      } break;
-    case 7: {
-        char str[20];
-        webserver_send_content_P(client, PSTR("\",\"logMqtt\":"), 12);
-
-        itoa(heishamonSettings->logMqtt, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"logHexdump\":"), 14);
-
-        itoa(heishamonSettings->logHexdump, str, 10);
-        webserver_send_content(client, str, strlen(str));
-      } break;
-    case 8: {
-        char str[20];
-        webserver_send_content_P(client, PSTR(",\"logSerial1\":"), 14);
-        itoa(heishamonSettings->logSerial1, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"optionalPCB\":"), 15);
-        itoa(heishamonSettings->optionalPCB, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"opentherm\":"), 13);
-        itoa(heishamonSettings->opentherm, str, 10);
-        webserver_send_content(client, str, strlen(str));
-      } break;
-    case 9: {
-        char str[20];
-        webserver_send_content_P(client, PSTR(",\"use_1wire\":"), 13);
-        itoa(heishamonSettings->use_1wire, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"waitDallasTime\":"), 18);
-        itoa(heishamonSettings->waitDallasTime, str, 10);
-        webserver_send_content(client, str, strlen(str));
-      } break;
-    case 10: {
-        char str[20];
-        webserver_send_content_P(client, PSTR(",\"updataAllDallasTime\":"), 23);
-
-        itoa(heishamonSettings->updataAllDallasTime, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"dallasResolution\":"), 20);
-
-        itoa(heishamonSettings->dallasResolution , str, 10);
-        webserver_send_content(client, str, strlen(str));
-      } break;
-    case 11: {
-        char str[20];
-        webserver_send_content_P(client, PSTR(",\"use_s0\":"), 10);
-
-        itoa(heishamonSettings->use_s0, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_1_gpio\":"), 13);
-
-        int i = 0;
-
-        if (heishamonSettings->s0Settings[i].gpiopin == 255) heishamonSettings->s0Settings[i].gpiopin = DEFAULT_S0_PIN_1;  //dirty hack
-        itoa(heishamonSettings->s0Settings[i].gpiopin, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_1_ppkwh\":"), 14);
-
-        itoa(heishamonSettings->s0Settings[i].ppkwh, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_1_interval\":"), 17);
-
-        itoa(heishamonSettings->s0Settings[i].lowerPowerInterval, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_1_minpulsewidth\":"), 22);
-
-        itoa(heishamonSettings->s0Settings[i].minimalPulseWidth, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_1_maxpulsewidth\":"), 22);
-
-        itoa(heishamonSettings->s0Settings[i].maximalPulseWidth, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_1_minwatt\":"), 16);
-
-        itoa((int) round((3600 * 1000 / heishamonSettings->s0Settings[i].ppkwh) / heishamonSettings->s0Settings[i].lowerPowerInterval), str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_2_gpio\":"), 13);
-      } break;
-    case 12: {
-        char str[20];
-        int i = 1;
-
-        if (heishamonSettings->s0Settings[i].gpiopin == 255) heishamonSettings->s0Settings[i].gpiopin = DEFAULT_S0_PIN_2;  //dirty hack
-        itoa(heishamonSettings->s0Settings[i].gpiopin, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_2_ppkwh\":"), 14);
-
-        itoa(heishamonSettings->s0Settings[i].ppkwh, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_2_interval\":"), 17);
-
-        itoa(heishamonSettings->s0Settings[i].lowerPowerInterval, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_2_minpulsewidth\":"), 22);
-
-        itoa(heishamonSettings->s0Settings[i].minimalPulseWidth, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_2_maxpulsewidth\":"), 22);
-
-        itoa(heishamonSettings->s0Settings[i].maximalPulseWidth, str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR(",\"s0_2_minwatt\":"), 16);
-
-        itoa((int) round((3600 * 1000 / heishamonSettings->s0Settings[i].ppkwh) / heishamonSettings->s0Settings[i].lowerPowerInterval), str, 10);
-        webserver_send_content(client, str, strlen(str));
-
-        webserver_send_content_P(client, PSTR("}"), 1);
-      } break;
-  }
-  return 0;
-}
-
 int handleSettings(struct webserver_t *client) {
   if (client->content == 0) {
     webserver_send(client, 200, (char *)"text/html", 0);
@@ -942,15 +714,6 @@ int handleRoot(struct webserver_t *client, float readpercentage, int mqttReconne
     case 1: {
         webserver_send_content_P(client, heishamon_version, strlen_P(heishamon_version));
         webserver_send_content_P(client, webBodyRoot2, strlen_P(webBodyRoot2));
-        if (heishamonSettings->use_1wire) {
-          webserver_send_content_P(client, webBodyRootDallasTab, strlen_P(webBodyRootDallasTab));
-        }
-        if (heishamonSettings->use_s0) {
-          webserver_send_content_P(client, webBodyRootS0Tab, strlen_P(webBodyRootS0Tab));
-        }
-        if (heishamonSettings->opentherm) {
-          webserver_send_content_P(client, webBodyRootOpenthermTab, strlen_P(webBodyRootOpenthermTab));
-        }
         webserver_send_content_P(client, webBodyRootConsoleTab, strlen_P(webBodyRootConsoleTab));
       } break;
     case 2: {
@@ -986,15 +749,6 @@ int handleRoot(struct webserver_t *client, float readpercentage, int mqttReconne
     case 5: {
         webserver_send_content_P(client, webBodyEndDiv, strlen_P(webBodyEndDiv));
         webserver_send_content_P(client, webBodyRootHeatpumpValues, strlen_P(webBodyRootHeatpumpValues));
-        if (heishamonSettings->use_1wire) {
-          webserver_send_content_P(client, webBodyRootDallasValues, strlen_P(webBodyRootDallasValues));
-        }
-        if (heishamonSettings->use_s0) {
-          webserver_send_content_P(client, webBodyRootS0Values, strlen_P(webBodyRootS0Values));
-        }
-        if (heishamonSettings->opentherm) {
-          webserver_send_content_P(client, webBodyRootOpenthermValues, strlen_P(webBodyRootOpenthermValues));
-        }
         webserver_send_content_P(client, webBodyRootConsole, strlen_P(webBodyRootConsole));
         webserver_send_content_P(client, menuJS, strlen_P(menuJS));
       } break;

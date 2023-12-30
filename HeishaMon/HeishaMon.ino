@@ -182,12 +182,6 @@ void mqtt_reconnect()
       sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_iptopic);
       mqtt_client.publish(topic, WiFi.localIP().toString().c_str(), true);
 
-      if (heishamonSettings.use_s0) { // connect to s0 topic to retrieve older watttotal from mqtt
-        sprintf_P(mqtt_topic, PSTR("%s/%s/WatthourTotal/1"), heishamonSettings.mqtt_topic_base, mqtt_topic_s0);
-        mqtt_client.subscribe(mqtt_topic);
-        sprintf_P(mqtt_topic, PSTR("%s/%s/WatthourTotal/2"), heishamonSettings.mqtt_topic_base, mqtt_topic_s0);
-        mqtt_client.subscribe(mqtt_topic);
-      }
       if (mqttReconnects == 1) { //only resend all data on first connect to mqtt so a data bomb like and bad mqtt server will not cause a reconnect bomb everytime
         resetlastalldatatime(); //resend all heatpump values to mqtt
       }
@@ -424,18 +418,6 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
       log_message(log_msg);
       send_command(rawcommand, length);
       free(rawcommand);
-    } else if (strncmp(topic_command, mqtt_topic_s0, strlen(mqtt_topic_s0)) == 0)  // this is a s0 topic, check for watthour topic and restore it
-    {
-      char* topic_s0_watthour_port = topic_command + strlen(mqtt_topic_s0) + 15; //strip the first 17 "s0/WatthourTotal/" from the topic to get the s0 port
-      int s0Port = String(topic_s0_watthour_port).toInt();
-      float watthour = String(msg).toFloat();
-      restore_s0_Watthour(s0Port, watthour);
-      //unsubscribe after restoring the watthour values
-      char mqtt_topic[256];
-      sprintf(mqtt_topic, "%s", topic);
-      if (mqtt_client.unsubscribe(mqtt_topic)) {
-        log_message(_F("Unsubscribed from S0 watthour restore topic"));
-      }
     } else if (strncmp(topic_command, mqtt_topic_commands, strlen(mqtt_topic_commands)) == 0)  // check for commands to heishamon
     {
       char* topic_sendcommand = topic_command + strlen(mqtt_topic_commands) + 1; //strip the first 9 "commands/" from the topic to get what we need
@@ -547,12 +529,6 @@ void setupConditionals() {
     send_optionalpcb_query(); //send one datagram already at start
     lastOptionalPCBRunTime = millis();
   }
-
-  //these two after optional pcb because it needs to send a datagram fast after boot
-  // if (heishamonSettings.use_1wire) initDallasSensors(log_message, heishamonSettings.updataAllDallasTime, heishamonSettings.waitDallasTime, heishamonSettings.dallasResolution);
-  if (heishamonSettings.use_s0) initS0Sensors(heishamonSettings.s0Settings);
-
-
 }
 
 
@@ -697,8 +673,6 @@ void loop() {
     log_message(_F("Sending command from buffer"));
     popCommandBuffer();
   }
-
-  if (heishamonSettings.use_s0) s0Loop(mqtt_client, log_message, heishamonSettings.mqtt_topic_base, heishamonSettings.s0Settings);
 
   if ((!sending) && (!heishamonSettings.listenonly) && (heishamonSettings.optionalPCB) && ((unsigned long)(millis() - lastOptionalPCBRunTime) > OPTIONALPCBQUERYTIME) ) {
     lastOptionalPCBRunTime = millis();

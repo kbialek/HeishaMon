@@ -1,14 +1,11 @@
 #define LWIP_INTERNAL
 
 #include <WiFi.h>
-// #include <ESP8266WiFiGratuitous.h>
 #include <PubSubClient.h>
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include "src/common/webserver.h"
-// #include "dallas.h"
-#include "s0.h"
 #include "gpio.h"
 
 #define HEATPUMP_VALUE_LEN    16
@@ -43,14 +40,10 @@ struct settingsStruct {
   bool listenonly = false; //listen only so heishamon can be installed parallel to cz-taw1, set commands will not work though
   bool listenmqtt = false; //do we get heatpump data from another heishamon over mqtt?
   bool optionalPCB = false; //do we emulate an optional PCB?
-  bool use_1wire = false; //1wire enabled?
-  bool use_s0 = false; //s0 enabled?
   bool logMqtt = false; //log to mqtt from start
   bool logHexdump = false; //log hexdump from start
   bool logSerial1 = true; //log to serial1 (gpio2) from start
-  bool opentherm = false; //opentherm enable flag
 
-  s0SettingsStruct s0Settings[NUM_S0_COUNTERS];
   gpioSettingsStruct gpioSettings;
 };
 
