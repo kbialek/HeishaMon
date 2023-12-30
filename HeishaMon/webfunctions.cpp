@@ -122,37 +122,3 @@ void loadSettings(settingsStruct *heishamonSettings) {
   //end read
 
 }
-
-void setupWifi(settingsStruct *heishamonSettings) {
-  log_message(_F("Wifi reconnecting with new configuration..."));
-  //no sleep wifi
-  // ESP32:Disabled
-  // WiFi.setSleepMode(WIFI_NONE_SLEEP);
-  WiFi.mode(WIFI_AP_STA);
-  WiFi.disconnect(true);
-  WiFi.softAPdisconnect(true);
-
-  if (heishamonSettings->wifi_ssid[0] != '\0') {
-    log_message(_F("Wifi client mode..."));
-    //WiFi.persistent(true); //breaks stuff
-
-    if (heishamonSettings->wifi_password[0] == '\0') {
-      WiFi.begin(heishamonSettings->wifi_ssid);
-    } else {
-      WiFi.begin(heishamonSettings->wifi_ssid, heishamonSettings->wifi_password);
-    }
-  }
-  else {
-    log_message(_F("Wifi hotspot mode..."));
-    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-    WiFi.softAP(F("HeishaMon-Setup"));
-  }
-
-  if (heishamonSettings->wifi_hostname[0] == '\0') {
-    //Set hostname on wifi rather than ESP_xxxxx
-    WiFi.hostname(F("HeishaMon"));
-  } else {
-    WiFi.hostname(heishamonSettings->wifi_hostname);
-  }
-}
-

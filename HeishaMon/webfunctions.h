@@ -48,7 +48,6 @@ struct settingsStruct {
 
 void setupConditionals();
 int getFreeMemory(void);
-void setupWifi(settingsStruct *heishamonSettings);
 int getWifiQuality(void);
 int getFreeMemory(void);
 void settingsToJson(DynamicJsonDocument &jsonDoc, settingsStruct *heishamonSettings);

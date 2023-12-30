@@ -91,66 +91,6 @@ bool firstConnectSinceBoot = true; //if this is true there is no first connectio
 struct timerqueue_t **timerqueue = NULL;
 int timerqueue_size = 0;
 
-
-/*
-    check_wifi will process wifi reconnecting managing
-*/
-void check_wifi()
-{
-  if ((WiFi.status() != WL_CONNECTED) && (WiFi.localIP()))  {
-    // special case where it seems that we are not connect but we do have working IP (causing the -1% wifi signal), do a reset.
-    log_message(_F("Weird case, WiFi seems disconnected but is not. Resetting WiFi!"));
-    setupWifi(&heishamonSettings);
-  } else if ((WiFi.status() != WL_CONNECTED) || (!WiFi.localIP()))  {
-    /* we need to stop reconnecting to a configured wifi network if there is a hotspot user connected
-        also, do not disconnect if wifi network scan is active
-    */
-    if ((heishamonSettings.wifi_ssid[0] != '\0') && (WiFi.status() != WL_DISCONNECTED) && (WiFi.scanComplete() != -1) && (WiFi.softAPgetStationNum() > 0))  {
-      log_message(_F("WiFi lost, but softAP station connecting, so stop trying to connect to configured ssid..."));
-      WiFi.disconnect(true);
-    }
-
-    /*  only start this routine if timeout on
-        reconnecting to AP and SSID is set
-    */
-    if ((heishamonSettings.wifi_ssid[0] != '\0') && ((unsigned long)(millis() - lastWifiRetryTimer) > WIFIRETRYTIMER ) )  {
-      lastWifiRetryTimer = millis();
-      if (WiFi.softAPSSID() == "") {
-        log_message(_F("WiFi lost, starting setup hotspot..."));
-        WiFi.softAP((char*)"HeishaMon-Setup");
-      }
-      if ((WiFi.status() == WL_DISCONNECTED)  && (WiFi.softAPgetStationNum() == 0 )) {
-        log_message(_F("Retrying configured WiFi, ..."));
-        if (heishamonSettings.wifi_password[0] == '\0') {
-          WiFi.begin(heishamonSettings.wifi_ssid);
-        } else {
-          WiFi.begin(heishamonSettings.wifi_ssid, heishamonSettings.wifi_password);
-        }
-      } else {
-        log_message(_F("Reconnecting to WiFi failed. Waiting a few seconds before trying again."));
-        WiFi.disconnect(true);
-      }
-    }
-  } else { //WiFi connected
-    if (WiFi.softAPSSID() != "") {
-      log_message(_F("WiFi (re)connected, shutting down hotspot..."));
-      WiFi.softAPdisconnect(true);
-    }
-
-    if (firstConnectSinceBoot) { // this should start only when softap is down or else it will not work properly so run after the routine to disable softap
-      firstConnectSinceBoot = false;
-      lastMqttReconnectAttempt = 0; //initiate mqtt connection asap
-      setupOTA();
-    }
-
-    /*
-       always update if wifi is working so next time on ssid failure
-       it only starts the routine above after this timeout
-    */
-    lastWifiRetryTimer = millis();
-  }
-}
-
 void mqtt_reconnect()
 {
   unsigned long now = millis();
@@ -422,6 +362,36 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
+void connect_wifi() {
+    // Wait for connection
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("");
+    Serial.print("Connected to ");
+    Serial.println(WIFI_SSID);
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+}
+
+void connect_mqtt() {
+    // Serial.print("\nconnecting...");
+    // while (!mqtt_client.connect("esp32-dev", "mqtt_user", "-ofannEer8")) {
+    //     Serial.print(".");
+    //     delay(1000);
+    // }
+
+    // Serial.println("\nconnected!");
+
+    // mqtt_client.subscribe("/test/hello/command");
+}
+
+void connect() {
+    connect_wifi();
+    // connect_mqtt();
+}
+
 void setupOTA() {
   // Port defaults to 8266
   ArduinoOTA.setPort(8266);
@@ -455,6 +425,11 @@ void setupSerial() {
 
   Serial2.begin(9600);
   Serial2.flush();
+}
+
+void setupWifi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
 void setupMqtt() {
@@ -536,13 +511,15 @@ void setup() {
 
   loadSettings(&heishamonSettings);
 
-  setupWifi(&heishamonSettings);
+  setupWifi();
 
   setupMqtt();
 
   WiFi.printDiag(Serial);
 
   setupConditionals(); //setup for routines based on settings
+
+  connect();
 }
 
 void send_initial_query() {
@@ -596,10 +573,8 @@ void read_panasonic_data() {
 }
 
 void loop() {
-  // check wifi
-  check_wifi();
   // Handle OTA first.
-  ArduinoOTA.handle();
+  // ArduinoOTA.handle();
 
   mqtt_client.loop();
 
