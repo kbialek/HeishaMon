@@ -156,14 +156,23 @@ bool isValidReceiveChecksum() {
 
 bool readSerial() {
     int len = 0;
-    while ((Serial1.available()) && ((data_length + len) < MAXDATASIZE)) {
-        int byte = Serial1.read();
-        // forward byte CZ-TAW
-        if (byte != -1) {
-            Serial2.write(byte);
-            Serial2.flush();
+
+    while (Serial2.available()) {
+        int byte_from_cztaw = Serial2.read();
+        if (byte_from_cztaw != -1) {
+            Serial1.write(byte_from_cztaw);
+            Serial1.flush(true);
         }
-        data[data_length + len] = byte;  // read available data and place it after the last received data
+    }
+
+    while ((Serial1.available()) && ((data_length + len) < MAXDATASIZE)) {
+        int byte_from_hp = Serial1.read();
+        // forward byte to CZ-TAW
+        if (byte_from_hp != -1) {
+            Serial2.write(byte_from_hp);
+            Serial2.flush(true);
+        }
+        data[data_length + len] = byte_from_hp;  // read available data and place it after the last received data
         len++;
         if (data[0] != 113) {  // wrong header received!
             log_message(_F("Received bad header. Ignoring this data!"));
@@ -407,11 +416,11 @@ void setupSerial() {
     // TX Pin -> GPIO 19 (D19)
     Serial1.begin(9600, SERIAL_8N1, 18, 19);
     Serial1.flush();
-
+    
     // To CZ-TAW
     // RX Pin -> GPIO 16 (RX2)
     // TX Pin -> GPIO 17 (TX2)
-    Serial2.begin(9600, SERIAL_8N1, 16, 17);
+    Serial2.begin(9600, SERIAL_8N1);
     Serial2.flush();
 }
 
@@ -553,7 +562,7 @@ void read_panasonic_data() {
         data_length = 0;  // clear any data in array
         sending = false;  // receiving the answer from the send command timed out, so we are allowed to send a new command
     }
-    if ((heishamonSettings.listenonly || sending) && (Serial1.available() > 0)) readSerial();
+    if ((heishamonSettings.listenonly || sending) && (Serial1.available() > 0 || Serial2.available() > 0)) readSerial();
 }
 
 void loop() {
