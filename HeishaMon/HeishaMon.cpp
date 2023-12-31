@@ -333,20 +333,11 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     }
 }
 
-void connect_wifi() {
-    // Wait for connection
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("");
-    Serial.print("Connected to ");
-    Serial.println(WIFI_SSID);
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-}
-
 void connect_mqtt() {
+    if (!WiFi.isConnected() || mqtt_client.connected()) {
+        return;
+    }
+
     unsigned long now = millis();
     if ((lastMqttReconnectAttempt == 0) || ((unsigned long)(now - lastMqttReconnectAttempt) > MQTTRECONNECTTIMER)) {  // only try reconnect each MQTTRECONNECTTIMER seconds or on boot when lastMqttReconnectAttempt is still 0
         lastMqttReconnectAttempt = now;
@@ -372,7 +363,6 @@ void connect_mqtt() {
 }
 
 void connect() {
-    connect_wifi();
     connect_mqtt();
 }
 
@@ -546,6 +536,8 @@ void read_panasonic_data() {
 }
 
 void loop() {
+    connect();
+
     // Handle OTA first.
     ArduinoOTA.handle();
 
@@ -566,12 +558,6 @@ void loop() {
     // run the data query only each WAITTIME
     if ((unsigned long)(millis() - lastRunTime) > (1000 * heishamonSettings.waitTime)) {
         lastRunTime = millis();
-        // check mqtt
-        if ((WiFi.isConnected()) && (!mqtt_client.connected())) {
-            log_message(_F("Lost MQTT connection!"));
-            // connect();
-        }
-
         // log stats
         if (totalreads > 0) readpercentage = (((float)goodreads / (float)totalreads) * 100);
         String message;
