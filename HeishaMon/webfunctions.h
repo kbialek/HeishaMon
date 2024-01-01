@@ -14,7 +14,6 @@ struct settingsStruct {
   bool listenonly = true; //listen only so heishamon can be installed parallel to cz-taw1, set commands will not work though
   bool optionalPCB = false; //do we emulate an optional PCB?
   bool logMqtt = false; //log to mqtt from start
-  bool logHexdump = false; //log hexdump from start
 };
 
 int getFreeMemory(void);

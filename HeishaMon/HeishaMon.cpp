@@ -116,19 +116,6 @@ void log_message(char* string) {
     free(log_line);
 }
 
-void logHex(char* hex, byte hex_len) {
-#define LOGHEXBYTESPERLINE 32  // please be aware of max mqtt message size
-    for (int i = 0; i < hex_len; i += LOGHEXBYTESPERLINE) {
-        char buffer[(LOGHEXBYTESPERLINE * 3) + 1];
-        buffer[LOGHEXBYTESPERLINE * 3] = '\0';
-        for (int j = 0; ((j < LOGHEXBYTESPERLINE) && ((i + j) < hex_len)); j++) {
-            sprintf(&buffer[3 * j], "%02X ", hex[i + j]);
-        }
-        sprintf_P(log_msg, PSTR("data: %s"), buffer);
-        log_message(log_msg);
-    }
-}
-
 void mqttPublish(char* topic, char* subtopic, char* value) {
     char mqtt_topic[256];
     sprintf_P(mqtt_topic, PSTR("%s/%s/%s"), heishamonSettings.mqtt_topic_base, topic, subtopic);
@@ -174,7 +161,6 @@ bool readSerial() {
         len++;
         if (data[0] != 113) {  // wrong header received!
             log_message(_F("Received bad header. Ignoring this data!"));
-            if (heishamonSettings.logHexdump) logHex(data, len);
             badheaderread++;
             data_length = 0;
             return false;  // return so this while loop does not loop forever if there happens to be a continous invalid data stream
@@ -188,7 +174,6 @@ bool readSerial() {
 
         if ((data_length > (data[1] + 3)) || (data_length >= MAXDATASIZE)) {
             log_message(_F("Received more data than header suggests! Ignoring this as this is bad data."));
-            if (heishamonSettings.logHexdump) logHex(data, data_length);
             data_length = 0;
             toolongread++;
             return false;
@@ -198,7 +183,6 @@ bool readSerial() {
             sprintf_P(log_msg, PSTR("Received %d bytes data"), data_length);
             log_message(log_msg);
             sending = false;  // we received an answer after our last command so from now on we can start a new send request again
-            if (heishamonSettings.logHexdump) logHex(data, data_length);
             if (!isValidReceiveChecksum()) {
                 log_message(_F("Checksum received false!"));
                 data_length = 0;  // for next attempt
@@ -280,7 +264,6 @@ bool send_command(byte* command, int length) {
     sprintf_P(log_msg, PSTR("sent bytes: %d including checksum value: %d "), bytesSent, int(chk));
     log_message(log_msg);
 
-    if (heishamonSettings.logHexdump) logHex((char*)command, length);
     sendCommandReadTime = millis();  // set sendCommandReadTime when to timeout the answer of this command
     return true;
 }
@@ -522,7 +505,6 @@ void read_panasonic_data() {
         log_message(_F("Previous read data attempt failed due to timeout!"));
         sprintf_P(log_msg, PSTR("Received %d bytes data"), data_length);
         log_message(log_msg);
-        if (heishamonSettings.logHexdump) logHex(data, data_length);
         if (data_length == 0) {
             timeoutread++;
             totalreads++;  // at at timeout we didn't receive anything but did expect it so need to increase this for the stats
