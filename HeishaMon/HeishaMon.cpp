@@ -53,8 +53,10 @@ static int uploadpercentage = 0;
 char data[MAXDATASIZE] = {'\0'};
 byte data_length = 0;
 
+char cztaw_data[MAXDATASIZE] = {'\0'};
+byte cztaw_data_length = 0;
+
 // store actual data
-String openTherm[2];
 char actData[DATASIZE] = {'\0'};
 char actDataExtra[DATASIZE] = {'\0'};
 #define OPTDATASIZE 20
@@ -148,8 +150,33 @@ bool readSerial() {
             Serial1.write(byte_from_cztaw);
             Serial1.flush(true);
         }
+        if ((cztaw_data_length + len) < MAXDATASIZE) {
+            cztaw_data[cztaw_data_length + len] = byte_from_cztaw;
+            len++;
+        }
+        if (cztaw_data[0] != 0x31 && cztaw_data[0] != 0x71 && cztaw_data[0] != 0xf1) { // wrong cz-taw query header received
+            log_message(_F("Received bad CZ-TAW header. Ignoring this data!"));
+            cztaw_data_length = 0;
+            len = 0;
+            break;
+        }
+    }
+    cztaw_data_length += len;
+
+    if (cztaw_data_length > 1) {
+        if ((cztaw_data_length > (cztaw_data[1] + 3)) || (cztaw_data_length >= MAXDATASIZE)) {
+            log_message(_F("Received more data than CZ-TAW header suggests! Ignoring this as this is bad data."));
+            cztaw_data_length = 0;
+        }
+        if (cztaw_data_length == (cztaw_data[1] + 3)) {
+            char mqtt_topic[256];
+            sprintf(mqtt_topic, "%s/raw/data", heishamonSettings.mqtt_topic_base);
+            mqtt_client.publish(mqtt_topic, (const uint8_t*)cztaw_data, cztaw_data_length, false);  // do not retain this raw data
+            cztaw_data_length = 0;
+        }
     }
 
+    len = 0;
     while ((Serial1.available()) && ((data_length + len) < MAXDATASIZE)) {
         int byte_from_hp = Serial1.read();
         // forward byte to CZ-TAW
