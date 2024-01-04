@@ -56,6 +56,11 @@ byte data_length = 0;
 char cztaw_data[MAXDATASIZE] = {'\0'};
 byte cztaw_data_length = 0;
 
+#ifdef LOG_HPDUMP
+char raw_data[MAXDATASIZE] = {'\0'};
+byte raw_data_length = 0;
+#endif
+
 // store actual data
 char actData[DATASIZE] = {'\0'};
 char actDataExtra[DATASIZE] = {'\0'};
@@ -222,15 +227,17 @@ void czTawLoop() {
         return;
     }
 
-    if (memcmp(cztaw_data, panasonicQuery, sizeof(panasonicQuery)) == 0) {
-        if (actData[0] == 0x71) {
+    if (cztaw_data[0] != 0x71) {
+        // non-query commands are sent to the heatpump
+        send_command((byte *) cztaw_data, cztaw_data_length - 1); // skip the checksum, as it will be recalculated when sending the command
+    }
+
+    if (cztaw_data[0] == 0x71 || cztaw_data[0] == 0xf1) {
+        if (actData[0] == 0x71) { // send heatpump state to cz-taw only if it's already read from the heatpump
             log_message(_F("Responding to 0x71 query from CZ-TAW"));
             Serial2.write(actData, DATASIZE);
             Serial2.flush(true);
         }
-    } else {
-        // handle CZ-TAW commands here
-        send_command((byte *) cztaw_data, cztaw_data_length - 1); // skip the checksum, as it will be recalculated when sending the command
     }
 
     cztaw_data_length = 0;
@@ -240,11 +247,25 @@ void czTawLoop() {
 bool readHeatpumpSerial() {
     int len = 0;
 
+    #ifdef LOG_HPDUMP
+    char raw_data_mqtt_topic[256];
+    sprintf(raw_data_mqtt_topic, "%s/raw/hpdump", heishamonSettings.mqtt_topic_base);
+    #endif
+
     while ((Serial1.available()) && ((data_length + len) < MAXDATASIZE)) {
         int byte_from_hp = Serial1.read();
         data[data_length + len] = byte_from_hp;  // read available data and place it after the last received data
+        #ifdef LOG_HPDUMP
+        {
+            raw_data[raw_data_length++] = byte_from_hp;
+            if (raw_data_length == 32) {
+                mqtt_client.publish(raw_data_mqtt_topic, (const uint8_t*)raw_data, 32, false);
+                raw_data_length = 0;
+            }
+        }
+        #endif
         len++;
-        if (data[0] != 0x71) {  // wrong header received!
+        if (data[0] != 0x31 && data[0] != 0x71) {  // wrong header received!
             log_message(_F("Received bad header from HP. Ignoring this data!"));
             badheaderread++;
             data_length = 0;
@@ -265,6 +286,13 @@ bool readHeatpumpSerial() {
         }
 
         if (data_length == (data[1] + 3)) {  // we received all data (data[1] is header length field)
+            #ifdef LOG_HPDUMP
+            if (raw_data_length > 0) {
+                mqtt_client.publish(raw_data_mqtt_topic, (const uint8_t*)raw_data, raw_data_length, false);
+                raw_data_length = 0;
+            }
+            #endif
+
             sprintf_P(log_msg, PSTR("Received %d bytes data"), data_length);
             log_message(log_msg);
             sending = false;  // we received an answer after our last command so from now on we can start a new send request again
@@ -277,7 +305,18 @@ bool readHeatpumpSerial() {
             log_message(_F("Checksum and header received ok!"));
             goodreads++;
 
-            if (data_length == DATASIZE) {  // receive a full data block
+            if (data[0] == 0x31) {
+                // forward the handshake? data block
+                {
+                    char mqtt_topic[256];
+                    sprintf(mqtt_topic, "%s/raw/hp", heishamonSettings.mqtt_topic_base);
+                    mqtt_client.publish(mqtt_topic, (const uint8_t*)data, data_length, false);
+                }
+                Serial2.write(data, data_length);
+                Serial2.flush(true);
+                data_length = 0;
+                return true;
+            } else if (data_length == DATASIZE) {  // receive a full data block
                 if (data[3] == 0x10) {      // decode the normal data block
                     decode_heatpump_data(data, actData, mqtt_client, log_message, heishamonSettings.mqtt_topic_base, heishamonSettings.updateAllTime);
                     memcpy(actData, data, DATASIZE);
@@ -558,7 +597,7 @@ void read_panasonic_data() {
         sending = false;  // receiving the answer from the send command timed out, so we are allowed to send a new command
     }
 
-    if (sending && Serial1.available() > 0) {
+    if (Serial1.available() > 0) {
         readHeatpumpSerial();
     }
 }
