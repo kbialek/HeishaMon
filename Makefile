@@ -11,5 +11,8 @@ flash-ota:
 monitor:
 	pio device monitor
 
-log-raw-data:
-	@bash -c "set -a; source config.env; ./bin/log-raw-data.sh"
+print-raw-data:
+	@bash -c "set -a; source config.env; ./bin/print-raw-data.sh"
+
+print-logs:
+	@bash -c "set -a; source config.env; ./bin/print-logs.sh"
