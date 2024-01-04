@@ -141,7 +141,7 @@ bool isValidReceiveChecksum() {
     return (chk == 0);  // all received bytes + checksum should result in 0
 }
 
-bool readSerial() {
+bool readCzTawSerial() {
     int len = 0;
 
     while (Serial2.available()) {
@@ -158,7 +158,7 @@ bool readSerial() {
             log_message(_F("Received bad CZ-TAW header. Ignoring this data!"));
             cztaw_data_length = 0;
             len = 0;
-            break;
+            return false;
         }
     }
     cztaw_data_length += len;
@@ -167,16 +167,24 @@ bool readSerial() {
         if ((cztaw_data_length > (cztaw_data[1] + 3)) || (cztaw_data_length >= MAXDATASIZE)) {
             log_message(_F("Received more data than CZ-TAW header suggests! Ignoring this as this is bad data."));
             cztaw_data_length = 0;
+            return false;
         }
         if (cztaw_data_length == (cztaw_data[1] + 3)) {
             char mqtt_topic[256];
             sprintf(mqtt_topic, "%s/raw/data", heishamonSettings.mqtt_topic_base);
             mqtt_client.publish(mqtt_topic, (const uint8_t*)cztaw_data, cztaw_data_length, false);  // do not retain this raw data
             cztaw_data_length = 0;
+            return true;
         }
     }
 
-    len = 0;
+    return false;
+}
+
+
+bool readHeatpumpSerial() {
+    int len = 0;
+
     while ((Serial1.available()) && ((data_length + len) < MAXDATASIZE)) {
         int byte_from_hp = Serial1.read();
         // forward byte to CZ-TAW
@@ -541,7 +549,13 @@ void read_panasonic_data() {
         data_length = 0;  // clear any data in array
         sending = false;  // receiving the answer from the send command timed out, so we are allowed to send a new command
     }
-    if ((heishamonSettings.listenonly || sending) && (Serial1.available() > 0 || Serial2.available() > 0)) readSerial();
+    if (Serial2.available() > 0) {
+        readCzTawSerial();
+    }
+
+    if ((heishamonSettings.listenonly || sending) && Serial1.available() > 0) {
+        readHeatpumpSerial();
+    }
 }
 
 void loop() {
