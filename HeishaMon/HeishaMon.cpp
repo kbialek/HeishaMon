@@ -193,7 +193,7 @@ bool readCzTawSerial() {
             cztaw_data[cztaw_data_length + len] = byte_from_cztaw;
             len++;
         }
-        if (cztaw_data[0] != 0x31 && cztaw_data[0] != 0x71 && cztaw_data[0] != 0xf1) { // wrong cz-taw query header received
+        if (cztaw_data[0] != 0x31 && cztaw_data[0] != 0x71 && cztaw_data[0] != 0xf1) {  // wrong cz-taw query header received
             log_message(_F("Received bad header from CZ-TAW. Ignoring this data!"));
             char mqtt_topic[256];
             sprintf(mqtt_topic, "%s/raw/cztaw", heishamonSettings.mqtt_topic_base);
@@ -229,11 +229,11 @@ void czTawLoop() {
 
     if (cztaw_data[0] != 0x71) {
         // non-query commands are sent to the heatpump
-        send_command((byte *) cztaw_data, cztaw_data_length - 1); // skip the checksum, as it will be recalculated when sending the command
+        send_command((byte*)cztaw_data, cztaw_data_length - 1);  // skip the checksum, as it will be recalculated when sending the command
     }
 
     if (cztaw_data[0] == 0x71 || cztaw_data[0] == 0xf1) {
-        if (actData[0] == 0x71) { // send heatpump state to cz-taw only if it's already read from the heatpump
+        if (actData[0] == 0x71) {  // send heatpump state to cz-taw only if it's already read from the heatpump
             log_message(_F("Responding to 0x71 query from CZ-TAW"));
             Serial2.write(actData, DATASIZE);
             Serial2.flush(true);
@@ -243,19 +243,18 @@ void czTawLoop() {
     cztaw_data_length = 0;
 }
 
-
 bool readHeatpumpSerial() {
     int len = 0;
 
-    #ifdef LOG_HPDUMP
+#ifdef LOG_HPDUMP
     char raw_data_mqtt_topic[256];
     sprintf(raw_data_mqtt_topic, "%s/raw/hpdump", heishamonSettings.mqtt_topic_base);
-    #endif
+#endif
 
     while ((Serial1.available()) && ((data_length + len) < MAXDATASIZE)) {
         int byte_from_hp = Serial1.read();
         data[data_length + len] = byte_from_hp;  // read available data and place it after the last received data
-        #ifdef LOG_HPDUMP
+#ifdef LOG_HPDUMP
         {
             raw_data[raw_data_length++] = byte_from_hp;
             if (raw_data_length == 32) {
@@ -263,7 +262,7 @@ bool readHeatpumpSerial() {
                 raw_data_length = 0;
             }
         }
-        #endif
+#endif
         len++;
         if (data[0] != 0x31 && data[0] != 0x71) {  // wrong header received!
             log_message(_F("Received bad header from HP. Ignoring this data!"));
@@ -286,12 +285,12 @@ bool readHeatpumpSerial() {
         }
 
         if (data_length == (data[1] + 3)) {  // we received all data (data[1] is header length field)
-            #ifdef LOG_HPDUMP
+#ifdef LOG_HPDUMP
             if (raw_data_length > 0) {
                 mqtt_client.publish(raw_data_mqtt_topic, (const uint8_t*)raw_data, raw_data_length, false);
                 raw_data_length = 0;
             }
-            #endif
+#endif
 
             sprintf_P(log_msg, PSTR("Received %d bytes data"), data_length);
             log_message(log_msg);
@@ -317,7 +316,7 @@ bool readHeatpumpSerial() {
                 data_length = 0;
                 return true;
             } else if (data_length == DATASIZE) {  // receive a full data block
-                if (data[3] == 0x10) {      // decode the normal data block
+                if (data[3] == 0x10) {             // decode the normal data block
                     decode_heatpump_data(data, actData, mqtt_client, log_message, heishamonSettings.mqtt_topic_base, heishamonSettings.updateAllTime);
                     memcpy(actData, data, DATASIZE);
                     {
@@ -460,7 +459,7 @@ void setupSerial() {
     // TX Pin -> GPIO 19 (D19)
     Serial1.begin(9600, SERIAL_8E1, 18, 19);
     Serial1.flush();
-    
+
     // CZ-TAW Connection
     // RX Pin -> GPIO 16 (RX2)
     // TX Pin -> GPIO 17 (TX2)
