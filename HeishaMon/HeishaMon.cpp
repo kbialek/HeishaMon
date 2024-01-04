@@ -179,6 +179,16 @@ bool readCzTawSerial() {
     return false;
 }
 
+void czTawLoop() {
+    if (Serial2.available() == 0 || !readCzTawSerial()) {
+        return;
+    }
+
+    if (memcmp(cztaw_data, panasonicQuery, sizeof(panasonicQuery)) == 0) {
+        log_message(_F("Query from CZ-TAW"));
+    }
+}
+
 
 bool readHeatpumpSerial() {
     int len = 0;
@@ -561,9 +571,7 @@ void loop() {
 
     mqtt_client.loop();
 
-    if (Serial2.available() > 0) {
-        readCzTawSerial();
-    }
+    czTawLoop();
 
     read_panasonic_data();
 
