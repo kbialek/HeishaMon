@@ -146,10 +146,6 @@ bool readCzTawSerial() {
 
     while (Serial2.available()) {
         int byte_from_cztaw = Serial2.read();
-        if (byte_from_cztaw != -1) {
-            Serial1.write(byte_from_cztaw);
-            Serial1.flush(true);
-        }
         if ((cztaw_data_length + len) < MAXDATASIZE) {
             cztaw_data[cztaw_data_length + len] = byte_from_cztaw;
             len++;
@@ -173,6 +169,8 @@ bool readCzTawSerial() {
             char mqtt_topic[256];
             sprintf(mqtt_topic, "%s/raw/data", heishamonSettings.mqtt_topic_base);
             mqtt_client.publish(mqtt_topic, (const uint8_t*)cztaw_data, cztaw_data_length, false);  // do not retain this raw data
+            Serial1.write(cztaw_data, cztaw_data_length);
+            Serial1.flush(true);
             cztaw_data_length = 0;
             return true;
         }
@@ -549,9 +547,6 @@ void read_panasonic_data() {
         data_length = 0;  // clear any data in array
         sending = false;  // receiving the answer from the send command timed out, so we are allowed to send a new command
     }
-    if (Serial2.available() > 0) {
-        readCzTawSerial();
-    }
 
     if ((heishamonSettings.listenonly || sending) && Serial1.available() > 0) {
         readHeatpumpSerial();
@@ -565,6 +560,10 @@ void loop() {
     ArduinoOTA.handle();
 
     mqtt_client.loop();
+
+    if (Serial2.available() > 0) {
+        readCzTawSerial();
+    }
 
     read_panasonic_data();
 
