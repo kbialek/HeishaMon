@@ -385,15 +385,6 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
             char* topic_sendcommand = topic_command + strlen(mqtt_topic_commands) + 1;  // strip the first 9 "commands/" from the topic to get what we need
             send_heatpump_command(topic_sendcommand, msg, send_command, log_message, heishamonSettings.optionalPCB);
         }
-        // use this to receive valid heishamon raw data from other heishamon to debug this OT code
-#ifdef OTDEBUG
-        else if (strcmp((char*)"panasonic_heat_pump/data", topic) == 0) {  // check for raw heatpump input
-            sprintf_P(log_msg, PSTR("Received raw heatpump data from MQTT"));
-            log_message(log_msg);
-            decode_heatpump_data(msg, actData, mqtt_client, log_message, heishamonSettings.mqtt_topic_base, heishamonSettings.updateAllTime);
-            memcpy(actData, msg, DATASIZE);
-        }
-#endif
         mqttcallbackinprogress = false;
     }
 }
