@@ -141,6 +141,44 @@ bool isValidReceiveChecksum() {
     return (chk == 0);  // all received bytes + checksum should result in 0
 }
 
+void pushCommandBuffer(byte* command, int length) {
+    if (cmdnrel + 1 > MAXCOMMANDSINBUFFER) {
+        log_message(_F("Too much commands already in buffer. Ignoring this commands.\n"));
+        return;
+    }
+    cmdbuffer[cmdend].length = length;
+    memcpy(&cmdbuffer[cmdend].data, command, length);
+    cmdend = (cmdend + 1) % (MAXCOMMANDSINBUFFER);
+    cmdnrel++;
+}
+
+bool send_command(byte* command, int length) {
+    if (sending) {
+        log_message(_F("Already sending data. Buffering this send request"));
+        pushCommandBuffer(command, length);
+        return false;
+    }
+    sending = true;  // simple semaphore to only allow one send command at a time, semaphore ends when answered data is received
+
+    byte chk = calcChecksum(command, length);
+    int bytesSent = Serial1.write(command, length);  // first send command
+    bytesSent += Serial1.write(chk);                 // then calculcated checksum byte afterwards
+    sprintf_P(log_msg, PSTR("sent bytes: %d including checksum value: %d "), bytesSent, int(chk));
+    log_message(log_msg);
+
+    sendCommandReadTime = millis();  // set sendCommandReadTime when to timeout the answer of this command
+    return true;
+}
+
+void popCommandBuffer() {
+    // to make sure we can pop a command from the buffer
+    if ((!sending) && cmdnrel > 0) {
+        send_command(cmdbuffer[cmdstart].data, cmdbuffer[cmdstart].length);
+        cmdstart = (cmdstart + 1) % (MAXCOMMANDSINBUFFER);
+        cmdnrel--;
+    }
+}
+
 bool readCzTawSerial() {
     int len = 0;
 
@@ -151,7 +189,10 @@ bool readCzTawSerial() {
             len++;
         }
         if (cztaw_data[0] != 0x31 && cztaw_data[0] != 0x71 && cztaw_data[0] != 0xf1) { // wrong cz-taw query header received
-            log_message(_F("Received bad CZ-TAW header. Ignoring this data!"));
+            log_message(_F("Received bad header from CZ-TAW. Ignoring this data!"));
+            char mqtt_topic[256];
+            sprintf(mqtt_topic, "%s/raw/cztaw", heishamonSettings.mqtt_topic_base);
+            mqtt_client.publish(mqtt_topic, (const uint8_t*)cztaw_data, cztaw_data_length, false);  // do not retain this raw data
             cztaw_data_length = 0;
             len = 0;
             return false;
@@ -167,9 +208,8 @@ bool readCzTawSerial() {
         }
         if (cztaw_data_length == (cztaw_data[1] + 3)) {
             char mqtt_topic[256];
-            sprintf(mqtt_topic, "%s/raw/data", heishamonSettings.mqtt_topic_base);
+            sprintf(mqtt_topic, "%s/raw/cztaw", heishamonSettings.mqtt_topic_base);
             mqtt_client.publish(mqtt_topic, (const uint8_t*)cztaw_data, cztaw_data_length, false);  // do not retain this raw data
-            cztaw_data_length = 0;
             return true;
         }
     }
@@ -190,7 +230,10 @@ void czTawLoop() {
         }
     } else {
         // handle CZ-TAW commands here
+        send_command((byte *) cztaw_data, cztaw_data_length - 1); // skip the checksum, as it will be recalculated when sending the command
     }
+
+    cztaw_data_length = 0;
 }
 
 
@@ -201,8 +244,8 @@ bool readHeatpumpSerial() {
         int byte_from_hp = Serial1.read();
         data[data_length + len] = byte_from_hp;  // read available data and place it after the last received data
         len++;
-        if (data[0] != 113) {  // wrong header received!
-            log_message(_F("Received bad header. Ignoring this data!"));
+        if (data[0] != 0x71) {  // wrong header received!
+            log_message(_F("Received bad header from HP. Ignoring this data!"));
             badheaderread++;
             data_length = 0;
             return false;  // return so this while loop does not loop forever if there happens to be a continous invalid data stream
@@ -240,7 +283,7 @@ bool readHeatpumpSerial() {
                     memcpy(actData, data, DATASIZE);
                     {
                         char mqtt_topic[256];
-                        sprintf(mqtt_topic, "%s/raw/data", heishamonSettings.mqtt_topic_base);
+                        sprintf(mqtt_topic, "%s/raw/hp", heishamonSettings.mqtt_topic_base);
                         mqtt_client.publish(mqtt_topic, (const uint8_t*)actData, DATASIZE, false);  // do not retain this raw data
                     }
                     data_length = 0;
@@ -275,44 +318,6 @@ bool readHeatpumpSerial() {
         }
     }
     return false;
-}
-
-void pushCommandBuffer(byte* command, int length) {
-    if (cmdnrel + 1 > MAXCOMMANDSINBUFFER) {
-        log_message(_F("Too much commands already in buffer. Ignoring this commands.\n"));
-        return;
-    }
-    cmdbuffer[cmdend].length = length;
-    memcpy(&cmdbuffer[cmdend].data, command, length);
-    cmdend = (cmdend + 1) % (MAXCOMMANDSINBUFFER);
-    cmdnrel++;
-}
-
-bool send_command(byte* command, int length) {
-    if (sending) {
-        log_message(_F("Already sending data. Buffering this send request"));
-        pushCommandBuffer(command, length);
-        return false;
-    }
-    sending = true;  // simple semaphore to only allow one send command at a time, semaphore ends when answered data is received
-
-    byte chk = calcChecksum(command, length);
-    int bytesSent = Serial1.write(command, length);  // first send command
-    bytesSent += Serial1.write(chk);                 // then calculcated checksum byte afterwards
-    sprintf_P(log_msg, PSTR("sent bytes: %d including checksum value: %d "), bytesSent, int(chk));
-    log_message(log_msg);
-
-    sendCommandReadTime = millis();  // set sendCommandReadTime when to timeout the answer of this command
-    return true;
-}
-
-void popCommandBuffer() {
-    // to make sure we can pop a command from the buffer
-    if ((!sending) && cmdnrel > 0) {
-        send_command(cmdbuffer[cmdstart].data, cmdbuffer[cmdstart].length);
-        cmdstart = (cmdstart + 1) % (MAXCOMMANDSINBUFFER);
-        cmdnrel--;
-    }
 }
 
 // Callback function that is called when a message has been pushed to one of your topics.
