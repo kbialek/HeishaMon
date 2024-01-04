@@ -382,16 +382,16 @@ void setupSerial() {
     Serial.begin(115200);
     Serial.flush();
 
-    // To Heatpump 
+    // Heatpump Connection
     // RX Pin -> GPIO 18 (D18)
     // TX Pin -> GPIO 19 (D19)
-    Serial1.begin(9600, SERIAL_8N1, 18, 19);
+    Serial1.begin(9600, SERIAL_8E1, 18, 19);
     Serial1.flush();
     
-    // To CZ-TAW
+    // CZ-TAW Connection
     // RX Pin -> GPIO 16 (RX2)
     // TX Pin -> GPIO 17 (TX2)
-    Serial2.begin(9600, SERIAL_8N1);
+    Serial2.begin(9600, SERIAL_8E1);
     Serial2.flush();
 }
 
