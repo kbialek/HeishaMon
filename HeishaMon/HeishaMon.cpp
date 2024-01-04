@@ -289,10 +289,6 @@ void pushCommandBuffer(byte* command, int length) {
 }
 
 bool send_command(byte* command, int length) {
-    if (heishamonSettings.listenonly) {
-        log_message(_F("Not sending this command. Heishamon in listen only mode!"));
-        return false;
-    }
     if (sending) {
         log_message(_F("Already sending data. Buffering this send request"));
         pushCommandBuffer(command, length);
@@ -557,7 +553,7 @@ void read_panasonic_data() {
         sending = false;  // receiving the answer from the send command timed out, so we are allowed to send a new command
     }
 
-    if ((heishamonSettings.listenonly || sending) && Serial1.available() > 0) {
+    if (sending && Serial1.available() > 0) {
         readHeatpumpSerial();
     }
 }
@@ -579,7 +575,7 @@ void loop() {
         popCommandBuffer();
     }
 
-    if ((!sending) && (!heishamonSettings.listenonly) && (heishamonSettings.optionalPCB) && ((unsigned long)(millis() - lastOptionalPCBRunTime) > OPTIONALPCBQUERYTIME)) {
+    if ((!sending) && (heishamonSettings.optionalPCB) && ((unsigned long)(millis() - lastOptionalPCBRunTime) > OPTIONALPCBQUERYTIME)) {
         lastOptionalPCBRunTime = millis();
         send_optionalpcb_query();
     }
@@ -641,7 +637,7 @@ void loop() {
         mqtt_client.publish(mqtt_topic, stats.c_str(), MQTT_RETAIN_VALUES);
 
         // get new data
-        if (!heishamonSettings.listenonly) send_panasonic_query();
+        send_panasonic_query();
 
         // Make sure the LWT is set to Online, even if the broker have marked it dead.
         sprintf_P(mqtt_topic, PSTR("%s/%s"), heishamonSettings.mqtt_topic_base, mqtt_willtopic);
