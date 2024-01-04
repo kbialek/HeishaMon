@@ -169,8 +169,6 @@ bool readCzTawSerial() {
             char mqtt_topic[256];
             sprintf(mqtt_topic, "%s/raw/data", heishamonSettings.mqtt_topic_base);
             mqtt_client.publish(mqtt_topic, (const uint8_t*)cztaw_data, cztaw_data_length, false);  // do not retain this raw data
-            Serial1.write(cztaw_data, cztaw_data_length);
-            Serial1.flush(true);
             cztaw_data_length = 0;
             return true;
         }
@@ -185,7 +183,13 @@ void czTawLoop() {
     }
 
     if (memcmp(cztaw_data, panasonicQuery, sizeof(panasonicQuery)) == 0) {
-        log_message(_F("Query from CZ-TAW"));
+        if (actData[0] == 0x71) {
+            log_message(_F("Responding to 0x71 query from CZ-TAW"));
+            Serial2.write(actData, DATASIZE);
+            Serial2.flush(true);
+        }
+    } else {
+        // handle CZ-TAW commands here
     }
 }
 
@@ -195,11 +199,6 @@ bool readHeatpumpSerial() {
 
     while ((Serial1.available()) && ((data_length + len) < MAXDATASIZE)) {
         int byte_from_hp = Serial1.read();
-        // forward byte to CZ-TAW
-        if (byte_from_hp != -1) {
-            Serial2.write(byte_from_hp);
-            Serial2.flush(true);
-        }
         data[data_length + len] = byte_from_hp;  // read available data and place it after the last received data
         len++;
         if (data[0] != 113) {  // wrong header received!

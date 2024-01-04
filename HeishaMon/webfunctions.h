@@ -11,7 +11,7 @@ struct settingsStruct {
   char mqtt_port[6] = "1883";
   char mqtt_topic_base[128] = "home/hvac/heatpump/board";
 
-  bool listenonly = true; //listen only so heishamon can be installed parallel to cz-taw1, set commands will not work though
+  bool listenonly = false; //listen only so heishamon can be installed parallel to cz-taw1, set commands will not work though
   bool optionalPCB = false; //do we emulate an optional PCB?
   bool logMqtt = true; //log to mqtt from start
 };
