@@ -12,3 +12,4 @@ build_output
 firmware.map
 firmware.asm
 config.env
+*.log
