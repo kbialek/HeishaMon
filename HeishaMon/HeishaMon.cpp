@@ -232,9 +232,9 @@ void czTawLoop() {
         send_command((byte*)cztaw_data, cztaw_data_length - 1);  // skip the checksum, as it will be recalculated when sending the command
     }
 
-    if (cztaw_data[0] == 0x71 || cztaw_data[0] == 0xf1) {
+    if ((cztaw_data[0] == 0x71 || cztaw_data[0] == 0xf1) && cztaw_data[3] == 0x10) {
         if (actData[0] == 0x71) {  // send heatpump state to cz-taw only if it's already read from the heatpump
-            log_message(_F("Responding to 0x71 query from CZ-TAW"));
+            log_message(_F("Responding to heatpump data frame from CZ-TAW"));
             Serial2.write(actData, DATASIZE);
             Serial2.flush(true);
         }
