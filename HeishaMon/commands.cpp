@@ -12,7 +12,7 @@ const char* mqtt_topic_commands PROGMEM = "commands";
 const char* mqtt_topic_pcbvalues PROGMEM = "optional";
 const char* mqtt_logtopic PROGMEM = "log";
 
-const char* mqtt_willtopic PROGMEM = "LWT";
+const char* mqtt_willtopic PROGMEM = "status";
 const char* mqtt_iptopic PROGMEM = "ip";
 
 const char* mqtt_send_raw_value_topic PROGMEM = "SendRawValue";
