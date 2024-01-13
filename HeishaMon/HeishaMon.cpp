@@ -13,7 +13,6 @@
 #include "src/common/log.h"
 #include "src/common/progmem.h"
 #include "src/common/stricmp.h"
-#include "src/common/timerqueue.h"
 #include "version.h"
 #include "webfunctions.h"
 
@@ -494,42 +493,6 @@ void send_optionalpcb_query() {
     send_command(optionalPCBQuery, OPTIONALPCBQUERYSIZE);
 }
 
-void timer_cb(int nr) {
-    // if (nr > 0) {
-    //   rules_timer_cb(nr);
-    // } else {
-    //   switch (nr) {
-    //     case -1: {
-    //         LittleFS.begin();
-    //         LittleFS.format();
-    //         //create first boot file
-    //         File startupFile = LittleFS.open("/heishamon", "w");
-    //         startupFile.close();
-    //         WiFi.disconnect(true);
-    //         timerqueue_insert(1, 0, -2);
-    //       } break;
-    //     case -2: {
-    //         ESP.restart();
-    //       } break;
-    //     case -3: {
-    //         setupWifi(&heishamonSettings);
-    //       } break;
-    //     case -4: {
-    //         if (rules_parse("/rules.new") == -1) {
-    //           logprintln_P(F("new ruleset failed to parse, using previous ruleset"));
-    //           rules_parse("/rules.txt");
-    //         } else {
-    //           logprintln_P(F("new ruleset successfully parsed"));
-    //           if (LittleFS.begin()) {
-    //             LittleFS.rename("/rules.new", "/rules.txt");
-    //           }
-    //         }
-    //         rules_boot();
-    //       } break;
-    //   }
-    // }
-}
-
 void setup() {
     // first get total memory before we do anything
     getFreeMemory();
@@ -677,6 +640,4 @@ void loop() {
         sprintf_P(mqtt_topic, PSTR("%s/%s"), heishamonSettings.mqtt_topic_base, mqtt_willtopic);
         mqtt_client.publish(mqtt_topic, "Online");
     }
-
-    timerqueue_update();
 }
