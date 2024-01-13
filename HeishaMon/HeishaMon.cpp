@@ -345,6 +345,11 @@ bool readHeatpumpSerial() {
                 log_message(_F("Received optional PCB ack answer. Decoding this in OPT topics."));
                 decode_optional_heatpump_data(data, actOptData, mqtt_client, log_message, heishamonSettings.mqtt_topic_base, heishamonSettings.updateAllTime);
                 memcpy(actOptData, data, OPTDATASIZE);
+                {
+                    char mqtt_topic[256];
+                    sprintf(mqtt_topic, "%s/raw/hpopt", heishamonSettings.mqtt_topic_base);
+                    mqtt_client.publish(mqtt_topic, (const uint8_t*)actOptData, OPTDATASIZE, false);  // do not retain this raw data
+                }
                 data_length = 0;
                 return true;
             } else {

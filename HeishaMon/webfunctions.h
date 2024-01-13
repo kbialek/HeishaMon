@@ -11,7 +11,7 @@ struct settingsStruct {
   char mqtt_port[6] = "1883";
   char mqtt_topic_base[128] = "home/hvac/heatpump/board";
 
-  bool optionalPCB = false; //do we emulate an optional PCB?
+  bool optionalPCB = true; //do we emulate an optional PCB?
   bool logMqtt = true; //log to mqtt from start
 };
 
