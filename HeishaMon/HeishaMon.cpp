@@ -585,7 +585,7 @@ void loop() {
         send_optionalpcb_query();
     }
 
-    if ((unsigned long)(millis() - lastSendValveCommandRunTime) > (1000 * 30)) {
+    if ((unsigned long)(millis() - lastSendValveCommandRunTime) > (1000 * 20)) {
         lastSendValveCommandRunTime = millis();
         log_message(_F("Setting Z1/Z2 water temp"));
         char msg[16] = { 0 };
