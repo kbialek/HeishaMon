@@ -33,6 +33,7 @@ unsigned long lastMqttReconnectAttempt = 0;
 unsigned long lastWifiRetryTimer = 0;
 
 unsigned long lastRunTime = 0;
+unsigned long lastSendValveCommandRunTime = 0;
 unsigned long lastOptionalPCBRunTime = 0;
 unsigned long lastOptionalPCBSave = 0;
 
@@ -513,6 +514,8 @@ void setup() {
     setupOTA();
 
     connect();
+
+    lastSendValveCommandRunTime = millis();
 }
 
 void send_initial_query() {
@@ -580,6 +583,18 @@ void loop() {
     if ((!sending) && (heishamonSettings.optionalPCB) && ((unsigned long)(millis() - lastOptionalPCBRunTime) > OPTIONALPCBQUERYTIME)) {
         lastOptionalPCBRunTime = millis();
         send_optionalpcb_query();
+    }
+
+    if ((unsigned long)(millis() - lastSendValveCommandRunTime) > (1000 * 30)) {
+        lastSendValveCommandRunTime = millis();
+        log_message(_F("Setting Z1/Z2 water temp"));
+        char msg[16] = { 0 };
+
+        String mainOutletTemp = getDataValue(actData, 6 /* Main_Outlet_Temp */);
+        strcpy(msg, mainOutletTemp.c_str());
+
+        send_heatpump_command((char*)"SetZ1WaterTemp", msg, send_command, log_message, true);
+        send_heatpump_command((char*)"SetZ2WaterTemp", msg, send_command, log_message, true);
     }
 
     // run the data query only each WAITTIME
