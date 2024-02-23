@@ -11,5 +11,5 @@ pio
 build_output
 firmware.map
 firmware.asm
-config.env
+config.env*
 *.log
