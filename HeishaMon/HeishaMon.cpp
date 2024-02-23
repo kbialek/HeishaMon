@@ -515,7 +515,7 @@ void setup() {
 
     connect();
 
-    lastSendValveCommandRunTime = millis();
+    lastSendValveCommandRunTime = millis() + 15 * 1000;
 }
 
 void send_initial_query() {
@@ -592,6 +592,9 @@ void loop() {
 
         String mainOutletTemp = getDataValue(actData, 6 /* Main_Outlet_Temp */);
         strcpy(msg, mainOutletTemp.c_str());
+        if (atoi(msg) < 10) {
+            strcpy(msg, "10");
+        }
 
         send_heatpump_command((char*)"SetZ1WaterTemp", msg, send_command, log_message, true);
         send_heatpump_command((char*)"SetZ2WaterTemp", msg, send_command, log_message, true);
