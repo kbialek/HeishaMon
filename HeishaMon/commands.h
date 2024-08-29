@@ -21,13 +21,12 @@ extern const char* mqtt_topic_values;
 extern const char* mqtt_topic_xvalues;
 extern const char* mqtt_topic_commands;
 extern const char* mqtt_topic_pcbvalues;
-extern const char* mqtt_topic_1wire;
-extern const char* mqtt_topic_s0;
-extern const char* mqtt_topic_pcb;
+extern const char* mqtt_topic_control;
 extern const char* mqtt_logtopic;
 extern const char* mqtt_willtopic;
 extern const char* mqtt_iptopic;
 extern const char* mqtt_send_raw_value_topic;
+extern const char* mqtt_control_cztaw_rw;
 
 unsigned int set_heatpump_state(char *msg, unsigned char *cmd, char *log_msg);
 unsigned int set_pump(char *msg, unsigned char *cmd, char *log_msg);

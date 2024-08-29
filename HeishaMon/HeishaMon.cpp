@@ -25,6 +25,7 @@ bool mqttcallbackinprogress = false;  // mutex for processing mqtt callback
 
 bool extraDataBlockAvailable = false;  // this will be set to true if, during boot, heishamon detects this heatpump has extra data block (like K and L series do)
 bool extraDataBlockChecked = false;    // this will be true if we already checked for the extra data block
+bool czTawReadWrite = false;
 
 #define MQTTRECONNECTTIMER 30000  // it takes 30 secs for each mqtt server reconnect attempt
 unsigned long lastMqttReconnectAttempt = 0;
@@ -228,8 +229,10 @@ void czTawLoop() {
     }
 
     if (cztaw_data[0] != 0x71) {
-        // non-query commands are sent to the heatpump
-        send_command((byte*)cztaw_data, cztaw_data_length - 1);  // skip the checksum, as it will be recalculated when sending the command
+        if (czTawReadWrite) {
+            // non-query commands are sent to the heatpump
+            send_command((byte*)cztaw_data, cztaw_data_length - 1);  // skip the checksum, as it will be recalculated when sending the command
+        }
     }
 
     if ((cztaw_data[0] == 0x71 || cztaw_data[0] == 0xf1) && cztaw_data[3] == 0x10) {
@@ -363,6 +366,12 @@ bool readHeatpumpSerial() {
     return false;
 }
 
+void process_control_command(char * topic, char * msg) {
+    if (strcmp(topic, mqtt_control_cztaw_rw) == 0 && strlen(msg) == 1) {
+        czTawReadWrite = msg[0] == '1';
+    }
+}
+
 // Callback function that is called when a message has been pushed to one of your topics.
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     if (mqttcallbackinprogress) {
@@ -388,6 +397,10 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
         {
             char* topic_sendcommand = topic_command + strlen(mqtt_topic_commands) + 1;  // strip the first 9 "commands/" from the topic to get what we need
             send_heatpump_command(topic_sendcommand, msg, send_command, log_message, heishamonSettings.optionalPCB);
+        } else if (strncmp(topic_command, mqtt_topic_control, strlen(mqtt_topic_control)) == 0)  // check for control commands
+        {
+            char* topic_sendcommand = topic_command + strlen(mqtt_topic_control) + 1;  // strip the first 8 "control/" from the topic to get what we need
+            process_control_command(topic_sendcommand, msg);
         }
         mqttcallbackinprogress = false;
     }
@@ -407,6 +420,8 @@ void connect_mqtt() {
         if (mqtt_client.connect("heishamon", MQTT_USERNAME, MQTT_PASSWORD, topic, 1, true, "Offline")) {
             mqttReconnects++;
             sprintf(topic, "%s/%s/#", heishamonSettings.mqtt_topic_base, mqtt_topic_commands);
+            mqtt_client.subscribe(topic);
+            sprintf(topic, "%s/%s/#", heishamonSettings.mqtt_topic_base, mqtt_topic_control);
             mqtt_client.subscribe(topic);
             sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_send_raw_value_topic);
             mqtt_client.subscribe(topic);
