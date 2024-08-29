@@ -16,3 +16,9 @@ print-raw-data:
 
 print-logs:
 	@bash -c "set -a; source config.env; ./bin/print-logs.sh"
+
+cztaw-disable:
+	@bash -c "set -a; source config.env; ./bin/cztaw-toggle.sh 0"
+
+cztaw-enable:
+	@bash -c "set -a; source config.env; ./bin/cztaw-toggle.sh 1"
