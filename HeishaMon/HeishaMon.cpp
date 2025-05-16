@@ -26,6 +26,7 @@ bool mqttcallbackinprogress = false;  // mutex for processing mqtt callback
 bool extraDataBlockAvailable = false;  // this will be set to true if, during boot, heishamon detects this heatpump has extra data block (like K and L series do)
 bool extraDataBlockChecked = false;    // this will be true if we already checked for the extra data block
 bool czTawReadWrite = false;
+bool czTawReadWriteInit = true;
 
 #define MQTTRECONNECTTIMER 30000  // it takes 30 secs for each mqtt server reconnect attempt
 unsigned long lastMqttReconnectAttempt = 0;
@@ -33,6 +34,7 @@ unsigned long lastMqttReconnectAttempt = 0;
 #define WIFIRETRYTIMER 15000  // switch between hotspot and configured SSID each 10 secs if SSID is lost
 unsigned long lastWifiRetryTimer = 0;
 
+unsigned long startTime = 0;
 unsigned long lastRunTime = 0;
 unsigned long lastSendValveCommandRunTime = 0;
 unsigned long lastOptionalPCBRunTime = 0;
@@ -229,7 +231,7 @@ void czTawLoop() {
     }
 
     if (cztaw_data[0] != 0x71) {
-        if (czTawReadWrite) {
+        if (czTawReadWrite || czTawReadWriteInit) {
             // non-query commands are sent to the heatpump
             send_command((byte*)cztaw_data, cztaw_data_length - 1);  // skip the checksum, as it will be recalculated when sending the command
         }
@@ -530,6 +532,7 @@ void setup() {
 
     connect();
 
+    startTime = millis();
     lastSendValveCommandRunTime = millis() + 15 * 1000;
 }
 
@@ -589,6 +592,8 @@ void loop() {
     czTawLoop();
 
     read_panasonic_data();
+
+    czTawReadWriteInit = czTawReadWriteInit && (millis() - startTime) < 10000;
 
     if ((!sending) && (cmdnrel > 0)) {  // check if there is a send command in the buffer
         log_message(_F("Sending command from buffer"));
