@@ -593,7 +593,7 @@ void loop() {
 
     read_panasonic_data();
 
-    czTawReadWriteInit = czTawReadWriteInit && (millis() - startTime) < 10000;
+    czTawReadWriteInit = czTawReadWriteInit && (millis() - startTime) < 120 * 1000;
 
     if ((!sending) && (cmdnrel > 0)) {  // check if there is a send command in the buffer
         log_message(_F("Sending command from buffer"));
