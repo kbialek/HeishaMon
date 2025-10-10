@@ -15,6 +15,7 @@
 #include "src/common/stricmp.h"
 #include "version.h"
 #include "webfunctions.h"
+#include "esp_task_wdt.h"
 
 #define SERIALTIMEOUT 2000  // wait until all 203 bytes are read, must not be too long to avoid blocking the code
 
@@ -525,6 +526,9 @@ void send_optionalpcb_query() {
 }
 
 void setup() {
+    esp_task_wdt_init(60, true); // watchdog timeout in seconds
+    esp_task_wdt_add(NULL); // start monitoring the current RTOS task
+
     // first get total memory before we do anything
     getFreeMemory();
 
@@ -590,6 +594,8 @@ void read_panasonic_data() {
 }
 
 void loop() {
+    esp_task_wdt_reset();
+    
     connect();
 
     // Handle OTA first.
