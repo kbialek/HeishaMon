@@ -489,7 +489,14 @@ void setupSerial() {
     Serial2.flush();
 }
 
+// Function to handle Wi-Fi events
+void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
+    Serial.println("❌ Wi-Fi Station Disconnected. Rebooting");
+    ESP.restart(); 
+}
+
 void setupWifi() {
+    WiFi.disconnect();
     WiFi.mode(WIFI_STA);
     IPAddress ip, gateway, subnet;
     ip.fromString(WIFI_ADDRESS);
@@ -499,6 +506,7 @@ void setupWifi() {
         Serial.println("STA Failed to configure");
         return;
     }
+    WiFi.onEvent(WiFiStationDisconnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     WiFi.printDiag(Serial);
 }
