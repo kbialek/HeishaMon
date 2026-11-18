@@ -177,8 +177,8 @@
 |  TOP93 | 172 | 51 | Convert to DEC X-1   | Pump Duty [duty] |
 |  TOP62 | 173 | 59 | Convert to DEC (X-1) X10  | Fan 1 Motor Speed [R/Min] |
 |  TOP63 | 174 | 01 | Convert to DEC (X-1) X10  | Fan 2 Motor Speed [R/Min] |
-|  TOP | 175 | 36 |   | ? |
-|  TOP | 176 | 79 |   | ? |
+|  TOP142 | 175 | 36 | Convert to DEC -1  | Expansion Valve [Steps] |
+|  TOP | 176 | 79 | Convert to DEC -1  | ?Possible ByPass valve (T-CAP only, not exposed) |
 |  TOP | 177 | 01 | Convert to DEC -1  | 2 Zone mixing valve 1 opening [sec]|
 |  TOP | 178 | 01 | Convert to DEC -1  | 2 Zone mixing valve 2 opening [sec] |
 |  TOP12 | 179 | c3 | combine both bytes (180 byte) 08 (179 byte) be = 08be= 2238(DEC) - 1 = 2237  | number of operations |

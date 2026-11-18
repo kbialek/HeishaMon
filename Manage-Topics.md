@@ -52,3 +52,5 @@ static const char **topicDescription[] = {
 ```
 
 4. Don't forget to update #define NUMBER_OF_TOPICS to match the last topic number + 1
+
+5. TOP115-TOP141 are reserved: they are empty entries kept only so that topic numbers stay identical with upstream HeishaMon (where TOP142 is the expansion valve). Do not use them for a new topic. Either add your topic after TOP142, or implement one of the upstream topics and fill in its reserved slot (name, byte, function and description entry).

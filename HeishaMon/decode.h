@@ -121,7 +121,7 @@ static const byte knownModels[sizeof(Model) / sizeof(Model[0])][10] PROGMEM = { 
   0xE2, 0xD5, 0x0B, 0x08, 0x95, 0x02, 0xD6, 0x0E, 0x66, 0x95, //37
 };
 
-#define NUMBER_OF_TOPICS 115 //last topic number + 1
+#define NUMBER_OF_TOPICS 143 //last topic number + 1 (TOP115-TOP141 are reserved, see topics[])
 #define NUMBER_OF_TOPICS_EXTRA 6 //last topic number + 1
 #define NUMBER_OF_OPT_TOPICS 7 //last topic number + 1
 #define MAX_TOPIC_LEN 41 // max length + 1
@@ -270,6 +270,46 @@ static const char topics[][MAX_TOPIC_LEN] PROGMEM = {
   "Z2_Sensor_Settings",      //TOP112
   "Buffer_Tank_Delta",       //TOP113
   "External_Pad_Heater",     //TOP114
+  // TOP115-TOP141 are reserved and not implemented in this fork: their numbers are kept
+  // free so that topic numbers stay identical with upstream HeishaMon, where they are
+  // 115 Water_Pressure, 116 Second_Inlet_Temp, 117 Economizer_Outlet_Temp,
+  // 118 Second_Room_Thermostat_Temp, 119 External_Control, 120 External_Heat_Cool_Control,
+  // 121 External_Error_Signal, 122 External_Compressor_Control, 123 Z2_Pump_State,
+  // 124 Z1_Pump_State, 125 TwoWay_Valve_State, 126 ThreeWay_Valve_State2, 127 Z1_Valve_PID,
+  // 128 Z2_Valve_PID, 129 Bivalent_Control, 130 Bivalent_Mode, 131 Bivalent_Start_Temp,
+  // 132 Bivalent_Advanced_Heat, 133 Bivalent_Advanced_DHW, 134 Bivalent_Advanced_Start_Temp,
+  // 135 Bivalent_Advanced_Stop_Temp, 136 Bivalent_Advanced_Start_Delay,
+  // 137 Bivalent_Advanced_Stop_Delay, 138 Bivalent_Advanced_DHW_Delay, 139 Heating_Control,
+  // 140 Smart_DHW, 141 Quiet_Mode_Priority.
+  // A reserved topic has an empty name and is skipped by decode_heatpump_data().
+  "",                        //TOP115 reserved
+  "",                        //TOP116 reserved
+  "",                        //TOP117 reserved
+  "",                        //TOP118 reserved
+  "",                        //TOP119 reserved
+  "",                        //TOP120 reserved
+  "",                        //TOP121 reserved
+  "",                        //TOP122 reserved
+  "",                        //TOP123 reserved
+  "",                        //TOP124 reserved
+  "",                        //TOP125 reserved
+  "",                        //TOP126 reserved
+  "",                        //TOP127 reserved
+  "",                        //TOP128 reserved
+  "",                        //TOP129 reserved
+  "",                        //TOP130 reserved
+  "",                        //TOP131 reserved
+  "",                        //TOP132 reserved
+  "",                        //TOP133 reserved
+  "",                        //TOP134 reserved
+  "",                        //TOP135 reserved
+  "",                        //TOP136 reserved
+  "",                        //TOP137 reserved
+  "",                        //TOP138 reserved
+  "",                        //TOP139 reserved
+  "",                        //TOP140 reserved
+  "",                        //TOP141 reserved
+  "Expansion_Valve",         //TOP142
 };
 
 static const byte topicBytes[] PROGMEM = { //can store the index as byte (8-bit unsigned humber) as there aren't more then 255 bytes (actually only 203 bytes) to decode
@@ -388,6 +428,34 @@ static const byte topicBytes[] PROGMEM = { //can store the index as byte (8-bit 
   22,     //TOP112
   59,     //TOP113
   25,     //TOP114
+  0,      //TOP115 reserved
+  0,      //TOP116 reserved
+  0,      //TOP117 reserved
+  0,      //TOP118 reserved
+  0,      //TOP119 reserved
+  0,      //TOP120 reserved
+  0,      //TOP121 reserved
+  0,      //TOP122 reserved
+  0,      //TOP123 reserved
+  0,      //TOP124 reserved
+  0,      //TOP125 reserved
+  0,      //TOP126 reserved
+  0,      //TOP127 reserved
+  0,      //TOP128 reserved
+  0,      //TOP129 reserved
+  0,      //TOP130 reserved
+  0,      //TOP131 reserved
+  0,      //TOP132 reserved
+  0,      //TOP133 reserved
+  0,      //TOP134 reserved
+  0,      //TOP135 reserved
+  0,      //TOP136 reserved
+  0,      //TOP137 reserved
+  0,      //TOP138 reserved
+  0,      //TOP139 reserved
+  0,      //TOP140 reserved
+  0,      //TOP141 reserved
+  175,    //TOP142
 };
 
 
@@ -518,6 +586,34 @@ static const topicFP topicFunctions[] PROGMEM = {
   getFirstByte,        //TOP112 
   getIntMinus128,      //TOP113
   getBit3and4,         //TOP114
+  unknown,             //TOP115 reserved
+  unknown,             //TOP116 reserved
+  unknown,             //TOP117 reserved
+  unknown,             //TOP118 reserved
+  unknown,             //TOP119 reserved
+  unknown,             //TOP120 reserved
+  unknown,             //TOP121 reserved
+  unknown,             //TOP122 reserved
+  unknown,             //TOP123 reserved
+  unknown,             //TOP124 reserved
+  unknown,             //TOP125 reserved
+  unknown,             //TOP126 reserved
+  unknown,             //TOP127 reserved
+  unknown,             //TOP128 reserved
+  unknown,             //TOP129 reserved
+  unknown,             //TOP130 reserved
+  unknown,             //TOP131 reserved
+  unknown,             //TOP132 reserved
+  unknown,             //TOP133 reserved
+  unknown,             //TOP134 reserved
+  unknown,             //TOP135 reserved
+  unknown,             //TOP136 reserved
+  unknown,             //TOP137 reserved
+  unknown,             //TOP138 reserved
+  unknown,             //TOP139 reserved
+  unknown,             //TOP140 reserved
+  unknown,             //TOP141 reserved
+  getIntMinus1,        //TOP142
 };
 
 static const char *DisabledEnabled[] PROGMEM = {"2", "Disabled", "Enabled"};
@@ -549,6 +645,8 @@ static const char *SolarModeDesc[] PROGMEM = {"3", "Disabled", "Buffer", "DHW"};
 static const char *ZonesSensorType[] PROGMEM = {"4", "Water Temperature", "External Thermostat", "Internal Thermostat", "Thermistor"};
 static const char *LiquidType[] PROGMEM = {"2", "Water", "Glycol"};
 static const char *ExtPadHeaterType[] PROGMEM = {"3", "Disabled", "Type-A","Type-B"};
+static const char *Steps[] PROGMEM = {"0", "steps"};
+static const char *Reserved[] PROGMEM = {"0", ""};
 
 
 static const char **xtopicDescription[] PROGMEM = {
@@ -676,4 +774,32 @@ static const char **topicDescription[] PROGMEM = {
   ZonesSensorType, //TOP112
   Kelvin,          //TOP113
   ExtPadHeaterType,//TOP114
+  Reserved,        //TOP115 reserved
+  Reserved,        //TOP116 reserved
+  Reserved,        //TOP117 reserved
+  Reserved,        //TOP118 reserved
+  Reserved,        //TOP119 reserved
+  Reserved,        //TOP120 reserved
+  Reserved,        //TOP121 reserved
+  Reserved,        //TOP122 reserved
+  Reserved,        //TOP123 reserved
+  Reserved,        //TOP124 reserved
+  Reserved,        //TOP125 reserved
+  Reserved,        //TOP126 reserved
+  Reserved,        //TOP127 reserved
+  Reserved,        //TOP128 reserved
+  Reserved,        //TOP129 reserved
+  Reserved,        //TOP130 reserved
+  Reserved,        //TOP131 reserved
+  Reserved,        //TOP132 reserved
+  Reserved,        //TOP133 reserved
+  Reserved,        //TOP134 reserved
+  Reserved,        //TOP135 reserved
+  Reserved,        //TOP136 reserved
+  Reserved,        //TOP137 reserved
+  Reserved,        //TOP138 reserved
+  Reserved,        //TOP139 reserved
+  Reserved,        //TOP140 reserved
+  Reserved,        //TOP141 reserved
+  Steps,           //TOP142
 };

@@ -131,6 +131,9 @@ TOP111 | main/Z2_Sensor_Settings | Setting of the sensor for zone 2 (water, ext 
 TOP112 | main/Z1_Sensor_Settings | Setting of the sensor for zone 1 (water, ext thermostat, int. thermostat or thermistor)
 TOP113 | main/Buffer_Tank_Delta | Delta of buffer tank setting in Kelvin
 TOP114 | main/External_Pad_Heater | If the external pad heater is enabled (if installed)
+TOP142 | main/Expansion_Valve | Expansion valve (EEV) position in steps (one reported step = 4 half-steps of the EEV stepper, i.e. half a turn)
+
+TOP115-TOP141 are reserved and are not published by this firmware. Their numbers are kept free so that topic numbers stay identical with upstream HeishaMon, where TOP115-TOP141 are the water pressure, second inlet/economizer temperatures, external control, pump/valve states, valve PID, bivalent, heating control, smart DHW and quiet mode priority topics.
 
 
 

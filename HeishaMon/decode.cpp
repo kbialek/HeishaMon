@@ -288,6 +288,8 @@ void decode_heatpump_data(char* data, char* actData, PubSubClient &mqtt_client, 
     lastalldatatime = millis();
   }
   for (unsigned int Topic_Number = 0 ; Topic_Number < NUMBER_OF_TOPICS ; Topic_Number++) {
+    // reserved topic numbers (empty name, TOP115-TOP141) are not implemented here and are not published
+    if (pgm_read_byte(&topics[Topic_Number][0]) == 0) continue;
     String Topic_Value;
     Topic_Value = getDataValue(data, Topic_Number);
 
