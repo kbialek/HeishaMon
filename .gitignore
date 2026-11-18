@@ -13,3 +13,5 @@ firmware.map
 firmware.asm
 config.env*
 *.log
+# Python host tooling (uv / PlatformIO); uv.lock is committed on purpose
+.venv/

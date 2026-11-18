@@ -1,0 +1,27 @@
+# Host-side Python tooling for HeishaMon.
+#
+# The firmware itself is C++ built with PlatformIO (see platformio.ini, env:esp32 /
+# env:esp32ota). This file exists so the PlatformIO toolchain in .venv is declared
+# instead of installed by hand: `uv sync` reproduces it, `uv run pio run -e esp32`
+# builds with it. Nothing here is packaged or published.
+#
+# requires-python matches the existing .venv (uv, CPython 3.12.10).
+
+[project]
+name = "heishamon"
+version = "3.2.3" # mirrors heishamon_version in HeishaMon/version.h
+description = "Host-side tooling for the HeishaMon Panasonic Aquarea heat pump interface"
+requires-python = ">=3.12"
+dependencies = [
+    "pip>=26.3",
+]
+
+[dependency-groups]
+# Build/test tooling only — the firmware is not a Python package.
+dev = [
+    "platformio==6.1.18",
+]
+
+[tool.uv]
+# Do not try to build/install this project itself; only its dependencies.
+package = false
